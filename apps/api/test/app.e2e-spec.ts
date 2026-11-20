@@ -2,8 +2,10 @@ import 'dotenv/config';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
+import type { Server } from 'node:http';
 import request from 'supertest';
 import type { Agent } from 'supertest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 
@@ -13,7 +15,7 @@ import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter
  */
 describe('KodeCupid Milestone 1 (e2e)', () => {
   let app: INestApplication;
-  let httpServer: unknown;
+  let httpServer: Server;
 
   const prefix = `/${process.env.API_PREFIX ?? 'api/v1'}`;
   const debugCode = process.env.OTP_DEBUG_CODE ?? '246810';
@@ -29,8 +31,9 @@ describe('KodeCupid Milestone 1 (e2e)', () => {
     app.setGlobalPrefix(process.env.API_PREFIX ?? 'api/v1');
     app.use(cookieParser());
     app.useGlobalFilters(new AllExceptionsFilter());
-    await app.init();
-    httpServer = app.getHttpServer();
+    // Nest 12 only creates the HTTP server on listen(); port 0 avoids clashes.
+    await app.listen(0, '127.0.0.1');
+    httpServer = app.getHttpServer() as Server;
   });
 
   afterAll(async () => {
@@ -39,22 +42,27 @@ describe('KodeCupid Milestone 1 (e2e)', () => {
 
   describe('health', () => {
     it('reports the API and database as reachable', async () => {
-      await request(httpServer as never)
+      await request(httpServer)
         .get(`${prefix}/health`)
         .expect(200)
         .expect((response) => {
           expect(response.body.status).toBe('ok');
         });
 
-      await request(httpServer as never).get(`${prefix}/health/db`).expect(200);
+      await request(httpServer).get(`${prefix}/health/db`).expect(200);
     });
   });
 
   describe('registration → compliance → onboarding → profile', () => {
-    const agent: Agent = request.agent(httpServer as never);
+    let agent: Agent;
     const phone = newPhone();
     let accessCookie: string | undefined;
     let profileId: string | undefined;
+
+    // Agents must be built after the HTTP server exists (outer beforeAll).
+    beforeAll(() => {
+      agent = request.agent(httpServer);
+    });
 
     it('rejects an invalid phone number', async () => {
       await agent
@@ -229,8 +237,13 @@ describe('KodeCupid Milestone 1 (e2e)', () => {
   });
 
   describe('admin roles', () => {
-    const superAgent: Agent = request.agent(httpServer as never);
-    const moderatorAgent: Agent = request.agent(httpServer as never);
+    let superAgent: Agent;
+    let moderatorAgent: Agent;
+
+    beforeAll(() => {
+      superAgent = request.agent(httpServer);
+      moderatorAgent = request.agent(httpServer);
+    });
 
     it('signs both seeded roles in', async () => {
       const superLogin = await superAgent
@@ -281,9 +294,10 @@ describe('KodeCupid Milestone 1 (e2e)', () => {
     });
 
     it('changes a role by email and refuses to remove the last Super Admin', async () => {
+      const inviteEmail = `e2e.moderator.${Date.now()}@kodecupid.test`;
       const invitation = await superAgent
         .post(`${prefix}/admin/admins/invite`)
-        .send({ email: 'new.moderator@kodecupid.test', role: 'MODERATOR' })
+        .send({ email: inviteEmail, role: 'MODERATOR' })
         .expect(201);
 
       expect(invitation.body.inviteToken).toBeTruthy();

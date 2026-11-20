@@ -10,6 +10,41 @@ role-based admin area (Super Admin + Moderator).
 | [`apps/api`](./apps/api) | REST API | NestJS 12, Prisma 7, PostgreSQL 16 + PostGIS |
 | [`packages/shared`](./packages/shared) | Shared types, enums, zod schemas, permission matrix | TypeScript |
 
+## Milestone 1 in pictures
+
+| Member profile (mobile) | Admin — Super Admin | Admin — Moderator |
+| --- | --- | --- |
+| ![Member profile](docs/screens/03-member-profile-mobile.png) | ![Super Admin members](docs/screens/04-admin-users-super-admin.png) | ![Moderator members](docs/screens/05-admin-users-moderator.png) |
+
+The Moderator sees masked phone numbers and a smaller menu; the Super Admin sees full contact
+details, role management, settings and monetization. Compare
+[Super Admin](docs/screens/04-admin-users-super-admin.png) with
+[Moderator](docs/screens/05-admin-users-moderator.png).
+
+## Verified end-to-end
+
+| Check | Command | Status |
+| --- | --- | --- |
+| Static types (3 packages) | `pnpm typecheck` | ✅ |
+| Unit tests: privacy filtering, age gate, permission matrix, onboarding resume | `pnpm test` | ✅ 26 passed |
+| API flows against PostgreSQL + PostGIS | `pnpm test:e2e` | ✅ 18 passed |
+| Browser flows (register → onboarding → profile → admin roles) | `pnpm test:web` | ✅ 3 passed |
+| Production builds | `pnpm build` | ✅ |
+
+## Running it right now (local)
+
+The dev stack runs on the hosted PostGIS database configured in `apps/api/.env`:
+
+| Surface | URL |
+| --- | --- |
+| Member app | http://localhost:3000 |
+| Admin area | http://localhost:3000/admin/login |
+| API | http://localhost:4000/api/v1/health |
+
+Seeded logins (change before any real use): `admin@kodecupid.test` / `ChangeMe!Admin1` and
+`moderator@kodecupid.test` / `ChangeMe!Mod1`. OTP debug code: `246810`. The client-facing walkthrough
+is [`docs/client-test-instructions.md`](./docs/client-test-instructions.md).
+
 ## Quick start
 
 ```bash

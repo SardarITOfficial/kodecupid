@@ -3,8 +3,11 @@
 This build contains the full registration, onboarding, profile and admin foundation. Everything
 below can be tested in a browser; no technical knowledge needed.
 
-> **Where to test:** `[STAGING URL — add after deployment]`
-> **Admin area:** `[STAGING URL]/admin/login`
+> **Local build (running on the development machine):**
+> member app `http://localhost:3000` · admin `http://localhost:3000/admin/login` · API `http://localhost:4000/api/v1/health`
+>
+> **Staging URL:** `[add the deployed URL here once Vercel/Railway tokens are supplied]`
+>
 > **Support:** reply in the project thread with a screenshot and the phone number you used.
 
 ---

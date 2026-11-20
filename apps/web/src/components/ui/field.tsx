@@ -1,6 +1,7 @@
 'use client';
 
 import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { cn } from '@/lib/cn';
 
 const baseField =
   'w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-muted/70 transition-colors focus:border-crimson focus:outline-none focus:ring-2 focus:ring-crimson/20 disabled:bg-alabaster disabled:text-muted';
@@ -76,9 +77,7 @@ export function TextInput({
           id={fieldId}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy || undefined}
-          className={[baseField, borderFor(error), prefix ? 'rounded-l-none' : '', className]
-            .filter(Boolean)
-            .join(' ')}
+          className={cn(baseField, borderFor(error), prefix && 'rounded-l-none', className)}
           {...rest}
         />
       </div>
@@ -114,7 +113,7 @@ export function TextArea({ label, hint, error, optional, id, className = '', ...
         id={fieldId}
         aria-invalid={error ? true : undefined}
         aria-describedby={hint ? `${fieldId}-hint` : undefined}
-        className={[baseField, borderFor(error), 'min-h-28 resize-y', className].filter(Boolean).join(' ')}
+        className={cn(baseField, borderFor(error), 'min-h-28 resize-y', className)}
         {...rest}
       />
       {hint ? (
@@ -160,9 +159,7 @@ export function SelectField({
       <select
         id={fieldId}
         aria-invalid={error ? true : undefined}
-        className={[baseField, borderFor(error), 'appearance-none bg-white pr-9', className]
-          .filter(Boolean)
-          .join(' ')}
+        className={cn(baseField, borderFor(error), 'appearance-none bg-white pr-9', className)}
         {...rest}
       >
         {placeholder ? <option value="">{placeholder}</option> : null}

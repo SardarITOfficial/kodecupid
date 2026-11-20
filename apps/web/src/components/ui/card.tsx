@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/lib/cn';
 
 export function Card({
   children,
@@ -10,7 +11,12 @@ export function Card({
   as?: 'div' | 'section' | 'article' | 'li';
 }) {
   return (
-    <Tag className={`rounded-card border border-line bg-white p-5 shadow-[0_1px_2px_rgba(22,38,62,0.04)] ${className}`}>
+    <Tag
+      className={cn(
+        'rounded-card border border-line bg-white p-5 shadow-[0_1px_2px_rgba(22,38,62,0.04)]',
+        className,
+      )}
+    >
       {children}
     </Tag>
   );

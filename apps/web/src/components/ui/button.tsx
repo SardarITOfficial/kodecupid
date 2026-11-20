@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { cn } from '@/lib/cn';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'gold';
 type Size = 'sm' | 'md' | 'lg';
@@ -32,16 +33,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={[
+      className={cn(
         'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-60',
         VARIANTS[variant],
         SIZES[size],
-        fullWidth ? 'w-full' : '',
+        fullWidth && 'w-full',
         className,
-      ]
-        .filter(Boolean)
-        .join(' ')}
+      )}
       {...rest}
     >
       {loading ? (

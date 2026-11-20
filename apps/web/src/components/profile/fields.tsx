@@ -19,7 +19,7 @@ export function InfoRow({
       <span className="text-sm text-muted">{label}</span>
       <span className="flex flex-wrap items-center justify-end gap-2 text-right text-sm font-medium text-navy">
         {hasValue ? value : <span className="font-normal text-muted">{empty}</span>}
-        {hidden ? <Badge tone="neutral">Private</Badge> : null}
+        {hidden && hasValue ? <Badge tone="neutral">Private</Badge> : null}
       </span>
     </div>
   );
