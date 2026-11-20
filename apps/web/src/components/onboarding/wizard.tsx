@@ -7,6 +7,7 @@ import {
   GENDER_IDENTITY_LABELS,
   INTERESTED_IN_LABELS,
   ONBOARDING_STEP_LABELS,
+  PROFESSION_CATEGORY_LABELS,
   QUICK_PRIVACY_FIELDS,
   RELATIONSHIP_GOAL_LABELS,
   SHIFT_SCHEDULE_LABELS,
@@ -16,6 +17,7 @@ import {
   type OnboardingStep,
   type ProfileOwnerView,
   type ProfileField,
+  type ProfilePhotoView,
   type VisibilityLevel,
 } from '@kodecupid/shared';
 import { useSession } from '@/app/providers';
@@ -29,9 +31,18 @@ import { Card } from '@/components/ui/card';
 import { Alert, LoadingBlock } from '@/components/ui/feedback';
 import { ProgressSteps } from '@/components/ui/stepper';
 import { ToggleRow } from '@/components/ui/toggle';
+import { PhotoManager } from '@/components/profile/photo-manager';
 
 const ORDER = ONBOARDING_STEP_ORDER as unknown as OnboardingStep[];
-const VISIBLE_STEPS: OnboardingStep[] = ['welcome', 'identity', 'profession', 'location', 'preferences', 'privacy', 'complete'];
+const VISIBLE_STEPS: OnboardingStep[] = [
+  'welcome',
+  'identity',
+  'profession',
+  'location',
+  'preferences',
+  'privacy',
+  'complete',
+];
 
 interface FormState {
   displayName: string;
@@ -40,6 +51,7 @@ interface FormState {
   genderIdentityOther: string;
   interestedIn: string[];
   profession: string;
+  professionCategory: string;
   employerName: string;
   shiftSchedule: string;
   shiftNotes: string;
@@ -63,6 +75,7 @@ function initialForm(profile: ProfileOwnerView | null): FormState {
     genderIdentityOther: profile?.genderIdentityOther ?? '',
     interestedIn: profile?.interestedIn ?? [],
     profession: profile?.profession ?? '',
+    professionCategory: profile?.professionCategory ?? '',
     employerName: profile?.employerName ?? '',
     shiftSchedule: profile?.shiftSchedule ?? '',
     shiftNotes: profile?.shiftNotes ?? '',
@@ -96,6 +109,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
 
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [form, setForm] = useState<FormState>(initialForm(null));
+  const [photos, setPhotos] = useState<ProfilePhotoView[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -108,12 +122,13 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
     (async () => {
       try {
         const [state, profile] = await Promise.all([
-          apiFetch<OnboardingStatus>('/onboarding/state'),
+          apiFetch<OnboardingStatus>('/onboarding/status'),
           apiFetch<ProfileOwnerView>('/profile/me'),
         ]);
         if (cancelled) return;
         setStatus(state);
         setForm(initialForm(profile));
+        setPhotos(profile.photos ?? []);
       } catch (caught) {
         if (!cancelled) setError(errorMessage(caught, 'Could not load your setup.'));
       } finally {
@@ -162,6 +177,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
       case 'profession':
         return {
           profession: form.profession,
+          professionCategory: form.professionCategory,
           ...(form.employerName ? { employerName: form.employerName } : {}),
           shiftSchedule: form.shiftSchedule,
           ...(form.shiftNotes ? { shiftNotes: form.shiftNotes } : {}),
@@ -215,7 +231,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
 
     setSaving(true);
     try {
-      await apiFetch(`/onboarding/steps/${step}`, { method: 'PATCH', body: payload });
+      await apiFetch('/onboarding/step', { method: 'PATCH', body: { step, data: payload } });
       const next = ORDER[Math.min(stepIndex + 1, ORDER.length - 1)] ?? 'complete';
       router.push(`/onboarding/${next}`);
     } catch (caught) {
@@ -236,7 +252,11 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
       setMember(session);
       router.replace('/app');
     } catch (caught) {
-      setError(errorMessage(caught, 'We could not finish your setup.'));
+      if (caught instanceof ApiError && caught.code === 'PHOTO_REQUIRED') {
+        setError('Add at least one photo to finish — it is the first thing members see.');
+      } else {
+        setError(errorMessage(caught, 'We could not finish your setup.'));
+      }
     } finally {
       setFinishing(false);
     }
@@ -278,12 +298,17 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
             🎉
           </span>
           <h1 className="mt-3 text-xl font-semibold text-navy">
-            You&apos;re ready, {form.displayName || 'friend'}
+            Almost there, {form.displayName || 'friend'}
           </h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-            Your profile is live to members who match your preferences. You can change every field
-            and every privacy switch from your profile at any time.
+            One last thing: a profile needs at least one photo. You can add up to six, and change
+            them any time from your profile.
           </p>
+
+          <div className="mt-5 text-left">
+            <PhotoManager photos={photos} onChange={setPhotos} />
+          </div>
+
           <dl className="mt-5 grid grid-cols-2 gap-3 text-left text-sm">
             <div className="rounded-xl bg-alabaster p-3">
               <dt className="text-xs text-muted">City</dt>
@@ -312,13 +337,22 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
               </dd>
             </div>
           </dl>
+
           {error ? (
             <div className="mt-4 text-left">
               <Alert tone="danger">{error}</Alert>
             </div>
           ) : null}
-          <Button className="mt-6" size="lg" fullWidth loading={finishing} onClick={() => void finish()}>
-            Enter KodeCupid
+
+          <Button
+            className="mt-6"
+            size="lg"
+            fullWidth
+            loading={finishing}
+            disabled={photos.length === 0}
+            onClick={() => void finish()}
+          >
+            {photos.length === 0 ? 'Add a photo to continue' : 'Enter KodeCupid'}
           </Button>
         </Card>
       </div>
@@ -341,7 +375,8 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
             <h1 className="text-xl font-semibold text-navy">Welcome to KodeCupid</h1>
             <p className="mt-2 text-sm leading-relaxed text-charcoal">
               We built this for people whose lives run on shift patterns — nurses, doctors,
-              paramedics, firefighters and everyone else working when the rest of the world sleeps.
+              paramedics, teachers, first responders, engineers and technicians working when the rest
+              of the world sleeps.
             </p>
             <ul className="mt-4 space-y-2 text-sm text-charcoal">
               {[
@@ -414,8 +449,17 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
         {step === 'profession' ? (
           <div className="space-y-4">
             <h1 className="text-xl font-semibold text-navy">Work &amp; shifts</h1>
+            <SelectableChips
+              legend="Profession category"
+              options={optionsFrom(PROFESSION_CATEGORY_LABELS)}
+              value={form.professionCategory || null}
+              onChange={(value) => update('professionCategory', value as string)}
+            />
+            {fieldErrors.professionCategory ? (
+              <p className="text-xs font-medium text-crimson">{fieldErrors.professionCategory}</p>
+            ) : null}
             <TextInput
-              label="Profession"
+              label="Job title"
               required
               placeholder="e.g. Registered Nurse"
               value={form.profession}
@@ -423,11 +467,11 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
               error={fieldErrors.profession}
             />
             <TextInput
-              label="Employer"
+              label="Employer or institution"
               optional
               value={form.employerName}
               onChange={(event) => update('employerName', event.target.value)}
-              hint="Visible only if you switch on Workplace privacy later."
+              hint="Hidden by default if you switch on workplace privacy later."
             />
             <SelectableChips
               legend="Main shift pattern"
@@ -459,7 +503,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
               error={fieldErrors.city}
             />
             <TextInput
-              label="State / region"
+              label="State / province"
               optional
               value={form.region}
               onChange={(event) => update('region', event.target.value)}
@@ -524,7 +568,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
               max={500}
               value={String(form.maxDistanceKm)}
               onChange={(event) => update('maxDistanceKm', Number(event.target.value))}
-              hint="You can change this later. Discovery arrives in Milestone 2."
+              hint="You can change this later. Discovery arrives in a later milestone."
             />
           </div>
         ) : null}
@@ -547,10 +591,17 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
                     onChange={(checked) =>
                       setForm((current) => ({
                         ...current,
-                        visibility: { ...current.visibility, [field as ProfileField]: checked ? 'PUBLIC' : 'HIDDEN' } as Record<string, VisibilityLevel>,
+                        visibility: {
+                          ...current.visibility,
+                          [field as ProfileField]: checked ? 'PUBLIC' : 'HIDDEN',
+                        } as Record<string, VisibilityLevel>,
                       }))
                     }
-                    title={field === 'WORKPLACE' ? 'Workplace name' : field.replace(/_/g, ' ').toLowerCase()}
+                    title={
+                      field === 'WORKPLACE'
+                        ? 'Workplace name'
+                        : field.replace(/_/g, ' ').toLowerCase()
+                    }
                     description={
                       level === 'PUBLIC'
                         ? 'Visible on your profile'
@@ -581,7 +632,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
             Back
           </Button>
           <Button type="button" onClick={() => void saveAndContinue()} loading={saving} size="lg">
-            {step === 'privacy' ? 'Finish setup' : 'Continue'}
+            {step === 'privacy' ? 'Continue to finish' : 'Continue'}
           </Button>
         </div>
       </Card>

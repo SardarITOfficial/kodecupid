@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  ONBOARDING_STEP_LABELS,
   ONBOARDING_STEP_VALUES,
   type IdentityStepInput,
   type LocationStepInput,
@@ -39,10 +40,18 @@ export class OnboardingService {
     const progress = await this.ensureProgress(userId);
     const completedSteps = progress.completedSteps as OnboardingStep[];
     const completed = progress.completedAt !== null;
+    const done = new Set(completedSteps);
+
     return {
       completed,
       nextStep: completed ? 'complete' : nextIncompleteStep(completedSteps),
       completedSteps,
+      steps: ONBOARDING_SEQUENCE.map((step) => ({
+        step,
+        label: ONBOARDING_STEP_LABELS[step],
+        completed: done.has(step),
+      })),
+      canComplete: completed || ONBOARDING_SEQUENCE.every((step) => done.has(step)),
     };
   }
 
@@ -73,6 +82,7 @@ export class OnboardingService {
         const input = payload as ProfessionStepInput;
         await this.profile.update(userId, {
           profession: input.profession,
+          professionCategory: input.professionCategory,
           ...(input.employerName !== undefined ? { employerName: input.employerName } : {}),
           shiftSchedule: input.shiftSchedule,
           ...(input.shiftNotes !== undefined ? { shiftNotes: input.shiftNotes } : {}),
@@ -140,7 +150,7 @@ export class OnboardingService {
     });
 
     return {
-      status: { completed: false, nextStep, completedSteps: completed },
+      status: await this.state(userId),
       nextStep,
     };
   }
@@ -155,6 +165,18 @@ export class OnboardingService {
         ErrorCode.ONBOARDING_INCOMPLETE,
         'Please finish the remaining onboarding steps first.',
         { missing },
+      );
+    }
+
+    // A profile is only complete with at least one photo (Milestone 1 required field).
+    const photoCount = await this.prisma.profilePhoto.count({
+      where: { profile: { userId } },
+    });
+    if (photoCount === 0) {
+      throw errors.forbidden(
+        ErrorCode.PHOTO_REQUIRED,
+        'Add at least one profile photo to finish your profile.',
+        { missing: ['PHOTOS'] },
       );
     }
 

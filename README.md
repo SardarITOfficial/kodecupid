@@ -84,3 +84,4 @@ and pause → admin roles with enforced permissions → seed data → handover d
 
 Out of scope (later milestones): matching/discovery, messaging, payments, provider verification review,
 admin 2FA, i18n, native apps, and production document moderation.
+# kodecupid-m1

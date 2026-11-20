@@ -10,8 +10,10 @@ import type {
   Kids,
   Lifestyle,
   OnboardingStep,
+  ProfessionCategory,
   ProfileField,
   ProfileStatus,
+  RegionLaunchStatus,
   RelationshipGoal,
   ShiftSchedule,
   UserStatus,
@@ -38,6 +40,7 @@ export interface Paginated<T> {
 export interface LegalVersions {
   terms: string;
   guidelines: string;
+  safetyTips: string;
   privacy: string;
 }
 
@@ -70,6 +73,10 @@ export interface OnboardingStatus {
   completed: boolean;
   nextStep: OnboardingStep;
   completedSteps: OnboardingStep[];
+  /** Ordered checklist used by the status endpoint and the completion screen. */
+  steps: { step: OnboardingStep; label: string; completed: boolean }[];
+  /** True when every required step is saved (photos are checked at completion). */
+  canComplete: boolean;
 }
 
 export interface MemberSummary {
@@ -109,6 +116,7 @@ export interface ProfileView {
   region?: string;
   country?: string;
   profession?: string;
+  professionCategory?: ProfessionCategory;
   employerName?: string;
   shiftSchedule?: ShiftSchedule;
   shiftNotes?: string;
@@ -127,6 +135,7 @@ export interface ProfileView {
   kids?: Kids;
   bio?: string;
   workplaceName?: string;
+  workplacePrivacyEnabled?: boolean;
   photos?: ProfilePhotoView[];
   hiddenFields: ProfileField[];
 }
@@ -138,7 +147,8 @@ export interface ProfileOwnerView extends ProfileView {
   longitude: number | null;
   workplaceLatitude: number | null;
   workplaceLongitude: number | null;
-  workplaceRadiusM: number | null;
+  workplaceHideRadiusMeters: number | null;
+  workplacePrivacyEnabled: boolean;
   status: ProfileStatus;
   visibility: Record<ProfileField, VisibilityLevel>;
   completionPercent: number;
@@ -207,4 +217,54 @@ export interface AdminInvitationRow {
   expiresAt: string;
   createdAt: string;
   invitedBy: string | null;
+}
+
+/**
+ * Unified view of "who has an admin role by email": either an active admin
+ * account or a pending invitation. The `assignmentId` is the identifier used by
+ * the role management endpoints.
+ */
+export interface RoleAssignmentRow {
+  assignmentId: string;
+  email: string;
+  name: string | null;
+  role: AdminRole;
+  status: 'ACTIVE' | 'DISABLED' | 'PENDING' | 'EXPIRED' | 'REVOKED' | 'ACCEPTED';
+  source: 'ADMIN' | 'INVITATION';
+  createdAt: string;
+  lastLoginAt: string | null;
+  expiresAt: string | null;
+}
+
+export interface RoleAssignmentResult {
+  assignmentId: string;
+  email: string;
+  role: AdminRole;
+  status: RoleAssignmentRow['status'];
+  source: RoleAssignmentRow['source'];
+  applied: boolean;
+  /** Only present when a new pending invitation was created. */
+  inviteToken?: string;
+  inviteUrl?: string;
+}
+
+export interface RegionView {
+  id: string;
+  slug: string;
+  name: string;
+  state: string;
+  country: string;
+  launchStatus: RegionLaunchStatus;
+  paidSubscriberThreshold: number;
+  paidSubscriberCount: number;
+  launchedAt: string | null;
+}
+
+export interface AdminAuditLogRow {
+  id: string;
+  action: string;
+  admin: string;
+  targetType: string | null;
+  targetId: string | null;
+  createdAt: string;
 }

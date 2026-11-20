@@ -11,6 +11,7 @@ import {
   INTERESTED_IN_LABELS,
   KIDS_LABELS,
   LIFESTYLE_LABELS,
+  PROFESSION_CATEGORY_LABELS,
   RELATIONSHIP_GOAL_LABELS,
   SHIFT_SCHEDULE_LABELS,
   type ProfileOwnerView,
@@ -49,8 +50,8 @@ export default function ProfilePage() {
     setBusy(true);
     setError(null);
     try {
-      const path = profile.status === 'PAUSED' ? '/profile/me/resume' : '/profile/me/pause';
-      const updated = await apiFetch<ProfileOwnerView>(path, { method: 'POST' });
+      const path = profile.status === 'PAUSED' ? '/profile/resume' : '/profile/pause';
+      const updated = await apiFetch<ProfileOwnerView>(path, { method: 'PATCH' });
       setProfile(updated);
     } catch (caught) {
       setError(errorMessage(caught, 'Could not change your profile status.'));
@@ -160,14 +161,33 @@ export default function ProfilePage() {
       </SectionCard>
 
       <SectionCard title="Work" description="Shift workers come first here">
-        <InfoRow label="Profession" hidden={hidden('PROFESSION')} value={profile.profession} />
+        <InfoRow
+          label="Profession category"
+          hidden={hidden('PROFESSION')}
+          value={
+            profile.professionCategory
+              ? PROFESSION_CATEGORY_LABELS[profile.professionCategory]
+              : null
+          }
+        />
+        <InfoRow label="Job title" hidden={hidden('PROFESSION')} value={profile.profession} />
         <InfoRow label="Employer" hidden={hidden('PROFESSION')} value={profile.employerName} />
         <InfoRow
           label="Shift"
           hidden={hidden('SHIFT_SCHEDULE')}
           value={profile.shiftSchedule ? SHIFT_SCHEDULE_LABELS[profile.shiftSchedule] : null}
         />
-        <InfoRow label="Workplace" hidden={hidden('WORKPLACE')} value={profile.workplaceName} />
+        <InfoRow
+          label="Workplace"
+          hidden={hidden('WORKPLACE')}
+          value={
+            profile.workplacePrivacyEnabled
+              ? profile.workplaceName
+                ? `${profile.workplaceName} · hidden by workplace privacy`
+                : null
+              : profile.workplaceName
+          }
+        />
       </SectionCard>
 
       <SectionCard title="Background">

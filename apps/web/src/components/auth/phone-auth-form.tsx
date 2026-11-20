@@ -45,7 +45,7 @@ export function PhoneAuthForm({ flow }: { flow: 'register' | 'login' }) {
 
     setLoading(true);
     try {
-      const result = await apiFetch<OtpRequestResult>('/auth/otp/request', {
+      const result = await apiFetch<OtpRequestResult>('/auth/request-otp', {
         method: 'POST',
         body: { phone, countryCode },
       });

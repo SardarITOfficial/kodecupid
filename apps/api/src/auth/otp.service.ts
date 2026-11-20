@@ -1,12 +1,14 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import {
   OTP_MAX_ATTEMPTS,
+  OTP_REQUESTS_PER_WINDOW,
+  OTP_REQUEST_WINDOW_MINUTES,
   OTP_RESEND_COOLDOWN_SECONDS,
   OTP_TTL_MINUTES,
   type OtpRequestResult,
 } from '@kodecupid/shared';
 import { AppConfigService } from '../config/app-config.module';
-import { ErrorCode, errors } from '../common/errors';
+import { ErrorCode, appError, errors } from '../common/errors';
 import { RateLimiterService } from '../common/rate-limiter.service';
 import { randomNumericCode, safeEqual, sha256 } from '../common/security';
 import { PrismaService } from '../prisma/prisma.service';
@@ -41,9 +43,10 @@ export class OtpService {
   async issue({ phoneE164, ip }: IssueOptions): Promise<OtpRequestResult> {
     const now = new Date();
 
-    this.limiter.consume(`otp:phone:${phoneE164}`, 5, 15 * 60 * 1000);
+    const windowMs = OTP_REQUEST_WINDOW_MINUTES * 60 * 1000;
+    this.limiter.consume(`otp:phone:${phoneE164}`, OTP_REQUESTS_PER_WINDOW, windowMs);
     if (ip) {
-      this.limiter.consume(`otp:ip:${ip}`, 20, 15 * 60 * 1000);
+      this.limiter.consume(`otp:ip:${ip}`, 20, windowMs);
     }
 
     if (this.config.env.NODE_ENV !== 'test') {
@@ -112,15 +115,24 @@ export class OtpService {
     const challenge = await this.prisma.otpChallenge.findUnique({ where: { id: challengeId } });
 
     if (!challenge || challenge.consumedAt) {
-      throw errors.validation('That code is no longer valid. Request a new one.');
+      throw appError(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.OTP_INVALID,
+        'That code is no longer valid. Request a new one.',
+      );
     }
 
     if (challenge.expiresAt.getTime() < Date.now()) {
-      throw errors.validation('That code has expired. Request a new one.');
+      throw appError(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.OTP_EXPIRED,
+        'That code has expired. Request a new one.',
+      );
     }
 
     if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
-      throw errors.tooManyRequests(
+      throw appError(
+        HttpStatus.TOO_MANY_REQUESTS,
         ErrorCode.OTP_ATTEMPTS_EXCEEDED,
         'Too many incorrect codes. Request a new one.',
       );
@@ -140,7 +152,9 @@ export class OtpService {
       });
 
       const remaining = Math.max(0, OTP_MAX_ATTEMPTS - attempts);
-      throw errors.validation(
+      throw appError(
+        HttpStatus.BAD_REQUEST,
+        ErrorCode.OTP_INVALID,
         remaining > 0
           ? `That code is not right. ${remaining} attempt${remaining === 1 ? '' : 's'} left.`
           : 'Too many incorrect codes. Request a new one.',

@@ -12,6 +12,7 @@ import {
   INTERESTED_IN_LABELS,
   KIDS_LABELS,
   LIFESTYLE_LABELS,
+  PROFESSION_CATEGORY_LABELS,
   RELATIONSHIP_GOAL_LABELS,
   SHIFT_SCHEDULE_LABELS,
   type ProfileOwnerView,
@@ -23,6 +24,7 @@ import { Card } from '@/components/ui/card';
 import { Alert, LoadingBlock } from '@/components/ui/feedback';
 import { SelectableChips } from '@/components/ui/chips';
 import { SelectField, TextArea, TextInput } from '@/components/ui/field';
+import { ToggleRow } from '@/components/ui/toggle';
 import { PhotoManager } from '@/components/profile/photo-manager';
 
 const COUNTRY_OPTIONS = COUNTRY_DIAL_CODES.map((country) => ({
@@ -37,6 +39,7 @@ interface EditForm {
   genderIdentityOther: string;
   interestedIn: string[];
   profession: string;
+  professionCategory: string;
   employerName: string;
   shiftSchedule: string;
   shiftNotes: string;
@@ -58,6 +61,8 @@ interface EditForm {
   kids: string;
   bio: string;
   workplaceName: string;
+  workplacePrivacyEnabled: boolean;
+  workplaceHideRadiusMeters: string;
 }
 
 function formFrom(profile: ProfileOwnerView): EditForm {
@@ -68,6 +73,7 @@ function formFrom(profile: ProfileOwnerView): EditForm {
     genderIdentityOther: profile.genderIdentityOther ?? '',
     interestedIn: profile.interestedIn ?? [],
     profession: profile.profession ?? '',
+    professionCategory: profile.professionCategory ?? '',
     employerName: profile.employerName ?? '',
     shiftSchedule: profile.shiftSchedule ?? '',
     shiftNotes: profile.shiftNotes ?? '',
@@ -89,6 +95,10 @@ function formFrom(profile: ProfileOwnerView): EditForm {
     kids: profile.kids ?? '',
     bio: profile.bio ?? '',
     workplaceName: profile.workplaceName ?? '',
+    workplacePrivacyEnabled: profile.workplacePrivacyEnabled ?? false,
+    workplaceHideRadiusMeters: profile.workplaceHideRadiusMeters
+      ? String(profile.workplaceHideRadiusMeters)
+      : '500',
   };
 }
 
@@ -144,6 +154,7 @@ export default function EditProfilePage() {
       genderIdentityOther: form.genderIdentityOther.trim() || null,
       ...(form.interestedIn.length > 0 ? { interestedIn: form.interestedIn } : {}),
       profession: form.profession.trim() || null,
+      professionCategory: form.professionCategory || null,
       employerName: form.employerName.trim() || null,
       ...(form.shiftSchedule ? { shiftSchedule: form.shiftSchedule } : {}),
       shiftNotes: form.shiftNotes.trim() || null,
@@ -165,6 +176,10 @@ export default function EditProfilePage() {
       kids: form.kids || null,
       bio: form.bio.trim() || null,
       workplaceName: form.workplaceName.trim() || null,
+      workplacePrivacyEnabled: form.workplacePrivacyEnabled,
+      workplaceHideRadiusMeters: form.workplaceHideRadiusMeters
+        ? Number(form.workplaceHideRadiusMeters)
+        : null,
     };
 
     try {
@@ -254,14 +269,22 @@ export default function EditProfilePage() {
 
       <Card className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-navy">Work</h2>
+        <SelectField
+          label="Profession category"
+          value={form.professionCategory}
+          onChange={(event) => update('professionCategory', event.target.value)}
+          placeholder="Select…"
+          options={optionsFrom(PROFESSION_CATEGORY_LABELS)}
+          error={fieldErrors.professionCategory}
+        />
         <TextInput
-          label="Profession"
+          label="Job title"
           value={form.profession}
           onChange={(event) => update('profession', event.target.value)}
           error={fieldErrors.profession}
         />
         <TextInput
-          label="Employer"
+          label="Employer or institution"
           optional
           value={form.employerName}
           onChange={(event) => update('employerName', event.target.value)}
@@ -283,8 +306,28 @@ export default function EditProfilePage() {
           optional
           value={form.workplaceName}
           onChange={(event) => update('workplaceName', event.target.value)}
-          hint="Hidden by default. Geofenced workplace privacy arrives in Milestone 3."
+          hint="Hidden by default. Turn on workplace privacy to keep it hidden for everyone."
         />
+        <div className="rounded-xl border border-line bg-alabaster p-3">
+          <ToggleRow
+            id="workplace-privacy"
+            checked={form.workplacePrivacyEnabled}
+            onChange={(checked) => update('workplacePrivacyEnabled', checked)}
+            title="Workplace privacy"
+            description="Never show my workplace until geofenced matching ships. You can set the hide radius now."
+          />
+          {form.workplacePrivacyEnabled ? (
+            <TextInput
+              label="Hide radius (metres)"
+              type="number"
+              min={50}
+              max={5000}
+              value={form.workplaceHideRadiusMeters}
+              onChange={(event) => update('workplaceHideRadiusMeters', event.target.value)}
+              hint="Stored for the future geofencing feature; no location is published today."
+            />
+          ) : null}
+        </div>
       </Card>
 
       <Card className="space-y-4">

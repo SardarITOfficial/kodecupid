@@ -75,8 +75,8 @@ export default function PrivacyPage() {
     setError(null);
     setNotice(null);
     try {
-      const updated = await apiFetch<ProfileOwnerView>('/profile/me/visibility', {
-        method: 'PUT',
+      const updated = await apiFetch<ProfileOwnerView>('/profile/privacy', {
+        method: 'PATCH',
         body: { field, visibility: makePublic ? 'PUBLIC' : 'HIDDEN' },
       });
       setProfile(updated);

@@ -89,11 +89,18 @@ export function toPublicView(
   reveal('LOCATION', 'country', profile.country);
 
   reveal('PROFESSION', 'profession', profile.profession);
+  reveal('PROFESSION', 'professionCategory', profile.professionCategory);
   reveal('PROFESSION', 'employerName', profile.employerName);
   reveal('SHIFT_SCHEDULE', 'shiftSchedule', profile.shiftSchedule);
   reveal('SHIFT_SCHEDULE', 'shiftNotes', profile.shiftNotes);
 
-  reveal('WORKPLACE', 'workplaceName', profile.workplaceName);
+  // Workplace privacy is a hard switch on top of the visibility toggle: when it
+  // is on, the workplace is never returned until geofenced matching exists.
+  if (!profile.workplacePrivacyEnabled) {
+    reveal('WORKPLACE', 'workplaceName', profile.workplaceName);
+  } else if (hasValue(profile.workplaceName)) {
+    hiddenFields.push('WORKPLACE');
+  }
 
   reveal('RELIGION', 'religion', profile.religion);
   reveal('ETHNICITY', 'ethnicity', profile.ethnicity);
@@ -142,6 +149,7 @@ export function toOwnerView(
     region: profile.region ?? undefined,
     country: profile.country ?? undefined,
     profession: profile.profession ?? undefined,
+    professionCategory: profile.professionCategory ?? undefined,
     employerName: profile.employerName ?? undefined,
     shiftSchedule: profile.shiftSchedule ?? undefined,
     shiftNotes: profile.shiftNotes ?? undefined,
@@ -160,13 +168,14 @@ export function toOwnerView(
     kids: profile.kids ?? undefined,
     bio: profile.bio ?? undefined,
     workplaceName: profile.workplaceName ?? undefined,
+    workplacePrivacyEnabled: profile.workplacePrivacyEnabled,
     photos,
     dateOfBirth: dateOnly(profile.dateOfBirth),
     latitude: profile.latitude,
     longitude: profile.longitude,
     workplaceLatitude: profile.workplaceLatitude,
     workplaceLongitude: profile.workplaceLongitude,
-    workplaceRadiusM: profile.workplaceRadiusM,
+    workplaceHideRadiusMeters: profile.workplaceHideRadiusMeters,
     status: profile.status,
     visibility: visibilityMap(profile),
     completionPercent: completionPercent(profile, photos.length),

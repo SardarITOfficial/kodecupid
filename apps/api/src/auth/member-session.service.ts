@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  ComplianceStatus,
-  DocumentType,
-  MemberSession,
-  OnboardingStatus,
+import {
+  ONBOARDING_STEP_LABELS,
+  type ComplianceStatus,
+  type DocumentType,
+  type MemberSession,
+  type OnboardingStatus,
 } from '@kodecupid/shared';
 import { legalVersionsOf } from '../config/app-config';
 import { AppConfigService } from '../config/app-config.module';
 import type { MemberRecord } from './auth.types';
-import { nextIncompleteStep } from '../onboarding/onboarding.sequence';
+import {
+  nextIncompleteStep,
+  ONBOARDING_SEQUENCE,
+} from '../onboarding/onboarding.sequence';
 
-/** The two documents the member must explicitly accept before onboarding. */
-const MANDATORY_DOCUMENTS: DocumentType[] = ['TERMS', 'COMMUNITY_GUIDELINES'];
+/** The documents the member must explicitly accept before onboarding. */
+const MANDATORY_DOCUMENTS: DocumentType[] = ['TERMS', 'COMMUNITY_GUIDELINES', 'SAFETY_TIPS'];
 
 @Injectable()
 export class MemberSessionService {
@@ -22,6 +26,7 @@ export class MemberSessionService {
     const expected: Record<string, string> = {
       TERMS: versions.terms,
       COMMUNITY_GUIDELINES: versions.guidelines,
+      SAFETY_TIPS: versions.safetyTips,
     };
 
     const missing = MANDATORY_DOCUMENTS.filter(
@@ -38,12 +43,21 @@ export class MemberSessionService {
   }
 
   onboardingOf(member: MemberRecord): OnboardingStatus {
-    const completedSteps = (member.onboarding?.completedSteps ?? []) as OnboardingStatus['completedSteps'];
+    const completedSteps = (member.onboarding?.completedSteps ??
+      []) as OnboardingStatus['completedSteps'];
     const completed = member.onboardingCompletedAt !== null;
+    const done = new Set(completedSteps);
+
     return {
       completed,
       nextStep: completed ? 'complete' : nextIncompleteStep(completedSteps),
       completedSteps,
+      steps: ONBOARDING_SEQUENCE.map((step) => ({
+        step,
+        label: ONBOARDING_STEP_LABELS[step],
+        completed: done.has(step),
+      })),
+      canComplete: completed || ONBOARDING_SEQUENCE.every((step) => done.has(step)),
     };
   }
 

@@ -38,6 +38,8 @@ const envSchema = z
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+    /** Direct (unpooled) URL for migrations/seed; the API never uses it. */
+    DATABASE_URL_UNPOOLED: optionalString,
 
     JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
     JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
@@ -66,6 +68,7 @@ const envSchema = z
 
     TERMS_VERSION: z.string().default('1.0'),
     GUIDELINES_VERSION: z.string().default('1.0'),
+    SAFETY_TIPS_VERSION: z.string().default('1.0'),
     PRIVACY_VERSION: z.string().default('1.0'),
 
     SEED_ADMIN_EMAIL: z.string().default('admin@kodecupid.test'),
@@ -123,6 +126,7 @@ export function legalVersionsOf(env: AppEnv) {
   return {
     terms: env.TERMS_VERSION,
     guidelines: env.GUIDELINES_VERSION,
+    safetyTips: env.SAFETY_TIPS_VERSION,
     privacy: env.PRIVACY_VERSION,
   };
 }

@@ -13,6 +13,7 @@ function makeProfile(overrides: Partial<ProfileWithRelations> = {}): ProfileWith
     genderIdentityOther: null,
     interestedIn: ['MEN'],
     profession: 'Registered Nurse',
+    professionCategory: 'HEALTHCARE',
     employerName: 'Dhaka Medical College Hospital',
     shiftSchedule: 'NIGHT',
     shiftNotes: null,
@@ -38,7 +39,8 @@ function makeProfile(overrides: Partial<ProfileWithRelations> = {}): ProfileWith
     workplaceName: 'Dhaka Medical College Hospital',
     workplaceLatitude: 23.72,
     workplaceLongitude: 90.39,
-    workplaceRadiusM: 300,
+    workplacePrivacyEnabled: false,
+    workplaceHideRadiusMeters: 300,
     status: 'ACTIVE',
     pausedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -125,6 +127,58 @@ describe('toPublicView — field-level privacy', () => {
     const view = toPublicView(makeProfile({ status: 'PAUSED', pausedAt: new Date() }), photoUrl);
     expect(view.paused).toBe(true);
   });
+
+  it('reveals the profession category with the profession field', () => {
+    const profile = makeProfile({
+      visibility: [
+        {
+          id: 'v1',
+          profileId: 'profile_1',
+          field: 'PROFESSION',
+          visibility: 'PUBLIC',
+          updatedAt: new Date(),
+        },
+      ] as ProfileWithRelations['visibility'],
+    });
+
+    expect(toPublicView(profile, photoUrl).professionCategory).toBe('HEALTHCARE');
+
+    const hiddenProfile = makeProfile({
+      visibility: [
+        {
+          id: 'v1',
+          profileId: 'profile_1',
+          field: 'PROFESSION',
+          visibility: 'HIDDEN',
+          updatedAt: new Date(),
+        },
+      ] as ProfileWithRelations['visibility'],
+    });
+
+    const view = toPublicView(hiddenProfile, photoUrl);
+    expect(view.professionCategory).toBeUndefined();
+    expect(view.profession).toBeUndefined();
+    expect(view.hiddenFields).toContain('PROFESSION');
+  });
+
+  it('keeps the workplace hidden while workplace privacy is enabled, even if public', () => {
+    const profile = makeProfile({
+      workplacePrivacyEnabled: true,
+      visibility: [
+        {
+          id: 'v1',
+          profileId: 'profile_1',
+          field: 'WORKPLACE',
+          visibility: 'PUBLIC',
+          updatedAt: new Date(),
+        },
+      ] as ProfileWithRelations['visibility'],
+    });
+
+    const view = toPublicView(profile, photoUrl);
+    expect(view.workplaceName).toBeUndefined();
+    expect(view.hiddenFields).toContain('WORKPLACE');
+  });
 });
 
 describe('toOwnerView', () => {
@@ -132,6 +186,9 @@ describe('toOwnerView', () => {
     const view = toOwnerView(makeProfile(), photoUrl);
 
     expect(view.religion).toBe('Islam');
+    expect(view.professionCategory).toBe('HEALTHCARE');
+    expect(view.workplacePrivacyEnabled).toBe(false);
+    expect(view.workplaceHideRadiusMeters).toBe(300);
     expect(view.dateOfBirth).toBe('1997-03-14');
     expect(view.latitude).toBe(23.8103);
     expect(view.visibility.RELIGION).toBe('HIDDEN');

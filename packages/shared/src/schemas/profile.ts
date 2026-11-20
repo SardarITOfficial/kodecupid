@@ -8,6 +8,7 @@ import {
   INTERESTED_IN_VALUES,
   KIDS_VALUES,
   LIFESTYLE_VALUES,
+  PROFESSION_CATEGORY_VALUES,
   PROFILE_FIELD_VALUES,
   RELATIONSHIP_GOAL_VALUES,
   SHIFT_SCHEDULE_VALUES,
@@ -31,6 +32,7 @@ export const profileUpdateSchema = z
     interestedIn: z.array(z.enum(INTERESTED_IN_VALUES)).min(1).max(INTERESTED_IN_VALUES.length),
 
     profession: optionalText(60),
+    professionCategory: z.enum(PROFESSION_CATEGORY_VALUES).nullable(),
     employerName: optionalText(80),
     shiftSchedule: z.enum(SHIFT_SCHEDULE_VALUES),
     shiftNotes: optionalText(200),
@@ -63,7 +65,8 @@ export const profileUpdateSchema = z
     workplaceName: optionalText(80),
     workplaceLatitude: z.number().min(-90).max(90).nullable(),
     workplaceLongitude: z.number().min(-180).max(180).nullable(),
-    workplaceRadiusM: z.number().int().min(50).max(5000).nullable(),
+    workplacePrivacyEnabled: z.boolean(),
+    workplaceHideRadiusMeters: z.number().int().min(50).max(5000).nullable(),
   })
   .partial();
 

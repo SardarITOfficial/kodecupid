@@ -52,7 +52,7 @@ export default function VerifyPage() {
     setLoading(true);
     try {
       const result = await apiFetch<{ created: boolean; session: MemberSession }>(
-        '/auth/otp/verify',
+        '/auth/verify-otp',
         { method: 'POST', body: { challengeId: pending.challengeId, code } },
       );
       clearPendingOtp();
@@ -74,7 +74,7 @@ export default function VerifyPage() {
     setError(null);
     setLoading(true);
     try {
-      const result = await apiFetch<OtpRequestResult>('/auth/otp/request', {
+      const result = await apiFetch<OtpRequestResult>('/auth/request-otp', {
         method: 'POST',
         body: { phone: pending.phone, countryCode: 'US' },
       });

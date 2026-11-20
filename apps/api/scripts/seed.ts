@@ -18,8 +18,11 @@ import { ONBOARDING_SEQUENCE } from '../src/onboarding/onboarding.sequence';
  */
 
 const env = loadEnv();
+// Seeds run through the direct connection; Neon's pooler is for the app only.
 const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
+  adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL_UNPOOLED || env.DATABASE_URL,
+  }),
 });
 
 const LOCAL_STORAGE_DIR = join(process.cwd(), env.STORAGE_LOCAL_DIR);
@@ -32,6 +35,16 @@ interface SeedMember {
   genderIdentity: 'WOMAN' | 'MAN' | 'NON_BINARY' | 'OTHER' | 'PREFER_NOT_TO_SAY';
   interestedIn: ('WOMEN' | 'MEN' | 'NON_BINARY_PEOPLE' | 'EVERYONE')[];
   profession: string;
+  professionCategory:
+    | 'HEALTHCARE'
+    | 'EDUCATION'
+    | 'EMS'
+    | 'LAW_ENFORCEMENT'
+    | 'FIREFIGHTER'
+    | 'MILITARY_VETERAN'
+    | 'ENGINEER'
+    | 'TECHNICIAN'
+    | 'OTHER';
   employerName?: string;
   shiftSchedule: 'DAY' | 'NIGHT' | 'ROTATING' | 'FLEXIBLE' | 'ON_CALL' | 'OTHER';
   city: string;
@@ -55,6 +68,9 @@ interface SeedMember {
   paused?: boolean;
   photos?: number;
   accent?: string;
+  workplaceName?: string;
+  workplacePrivacyEnabled?: boolean;
+  workplaceHideRadiusMeters?: number;
   /** Explicit privacy overrides on top of the sensible defaults. */
   visibility?: { field: string; visibility: 'PUBLIC' | 'HIDDEN' }[];
 }
@@ -68,6 +84,7 @@ const MEMBERS: SeedMember[] = [
     genderIdentity: 'WOMAN',
     interestedIn: ['MEN'],
     profession: 'Registered Nurse',
+    professionCategory: 'HEALTHCARE',
     employerName: 'Dhaka Medical College Hospital',
     shiftSchedule: 'NIGHT',
     city: 'Dhaka',
@@ -75,6 +92,9 @@ const MEMBERS: SeedMember[] = [
     country: 'BD',
     latitude: 23.8103,
     longitude: 90.4125,
+    workplaceName: 'Dhaka Medical College Hospital',
+    workplacePrivacyEnabled: false,
+    workplaceHideRadiusMeters: 500,
     religion: 'Islam',
     ethnicity: 'Bengali',
     languages: ['Bengali', 'English'],
@@ -100,6 +120,7 @@ const MEMBERS: SeedMember[] = [
     genderIdentity: 'MAN',
     interestedIn: ['WOMEN'],
     profession: 'Paramedic',
+    professionCategory: 'EMS',
     employerName: 'SFFD',
     shiftSchedule: 'ROTATING',
     city: 'San Francisco',
@@ -130,6 +151,7 @@ const MEMBERS: SeedMember[] = [
     genderIdentity: 'WOMAN',
     interestedIn: ['EVERYONE'],
     profession: 'Nurse Practitioner',
+    professionCategory: 'HEALTHCARE',
     employerName: 'Ascension Seton',
     shiftSchedule: 'DAY',
     city: 'Austin',
@@ -160,6 +182,7 @@ const MEMBERS: SeedMember[] = [
     genderIdentity: 'MAN',
     interestedIn: ['WOMEN', 'NON_BINARY_PEOPLE'],
     profession: 'Pharmacist',
+    professionCategory: 'HEALTHCARE',
     employerName: 'Mount Sinai',
     shiftSchedule: 'NIGHT',
     city: 'New York',
@@ -191,6 +214,7 @@ const MEMBERS: SeedMember[] = [
     genderIdentity: 'WOMAN',
     interestedIn: ['MEN', 'WOMEN'],
     profession: 'Emergency Physician',
+    professionCategory: 'HEALTHCARE',
     employerName: 'Northwestern Memorial',
     shiftSchedule: 'ROTATING',
     city: 'Chicago',
@@ -198,6 +222,9 @@ const MEMBERS: SeedMember[] = [
     country: 'US',
     latitude: 41.8781,
     longitude: -87.6298,
+    workplaceName: 'Northwestern Memorial',
+    workplacePrivacyEnabled: true,
+    workplaceHideRadiusMeters: 800,
     languages: ['English', 'Arabic'],
     heightCm: 170,
     drinking: 'SOCIALLY',
@@ -216,7 +243,6 @@ const MEMBERS: SeedMember[] = [
     ],
   },
 ];
-
 async function seedAdmin(
   email: string,
   name: string,
@@ -294,6 +320,7 @@ async function seedMember(member: SeedMember): Promise<string> {
     genderIdentity: member.genderIdentity,
     interestedIn: member.interestedIn,
     profession: member.profession,
+    professionCategory: member.professionCategory,
     employerName: member.employerName ?? null,
     shiftSchedule: member.shiftSchedule,
     city: member.city,
@@ -316,6 +343,9 @@ async function seedMember(member: SeedMember): Promise<string> {
     bio: member.bio,
     status: member.paused ? ('PAUSED' as const) : ('ACTIVE' as const),
     pausedAt: member.paused ? now : null,
+    workplaceName: member.workplaceName ?? null,
+    workplacePrivacyEnabled: member.workplacePrivacyEnabled ?? false,
+    workplaceHideRadiusMeters: member.workplaceHideRadiusMeters ?? null,
   };
 
   const profile = await prisma.profile.upsert({
@@ -350,6 +380,7 @@ async function seedMember(member: SeedMember): Promise<string> {
   const acceptances = [
     { documentType: 'TERMS' as const, documentVersion: env.TERMS_VERSION },
     { documentType: 'COMMUNITY_GUIDELINES' as const, documentVersion: env.GUIDELINES_VERSION },
+    { documentType: 'SAFETY_TIPS' as const, documentVersion: env.SAFETY_TIPS_VERSION },
     { documentType: 'PRIVACY' as const, documentVersion: env.PRIVACY_VERSION },
   ];
 
@@ -397,8 +428,54 @@ async function seedMember(member: SeedMember): Promise<string> {
   return user.id;
 }
 
+/** Metro launch records. The 200 paid-subscriber threshold gates future opening. */
+const REGIONS = [
+  {
+    slug: 'atlanta-ga',
+    name: 'Atlanta',
+    state: 'Georgia',
+    country: 'US',
+    latitude: 33.749,
+    longitude: -84.388,
+    launchStatus: 'PRE_LAUNCH' as const,
+    paidSubscriberThreshold: 200,
+    paidSubscriberCount: 0,
+  },
+  {
+    slug: 'charlotte-nc',
+    name: 'Charlotte',
+    state: 'North Carolina',
+    country: 'US',
+    latitude: 35.2271,
+    longitude: -80.8431,
+    launchStatus: 'PLANNED' as const,
+    paidSubscriberThreshold: 200,
+    paidSubscriberCount: 0,
+  },
+];
+
+async function seedRegions(): Promise<void> {
+  for (const region of REGIONS) {
+    await prisma.region.upsert({
+      where: { slug: region.slug },
+      create: region,
+      update: {
+        name: region.name,
+        state: region.state,
+        country: region.country,
+        latitude: region.latitude,
+        longitude: region.longitude,
+        launchStatus: region.launchStatus,
+        paidSubscriberThreshold: region.paidSubscriberThreshold,
+      },
+    });
+  }
+}
+
 async function main(): Promise<void> {
   console.log('› Seeding KodeCupid…\n');
+
+  await seedRegions();
 
   await seedAdmin(env.SEED_ADMIN_EMAIL, 'KodeCupid Super Admin', 'SUPER_ADMIN', env.SEED_ADMIN_PASSWORD);
   await seedAdmin(
@@ -415,9 +492,11 @@ async function main(): Promise<void> {
 
   const memberCount = await prisma.user.count();
   const adminCount = await prisma.adminUser.count();
+  const regionCount = await prisma.region.count();
 
   console.log(`✓ Admins: ${adminCount}`);
   console.log(`✓ Members: ${memberCount} (${memberIds.length} sample profiles seeded)`);
+  console.log(`✓ Regions: ${regionCount} (${REGIONS.map((region) => region.name).join(', ')})`);
   console.log('\nAdmin logins');
   console.log('┌──────────────┬──────────────────────────────┬──────────────────┐');
   console.log('│ Role         │ Email                        │ Password         │');

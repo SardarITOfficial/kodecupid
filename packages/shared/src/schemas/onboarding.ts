@@ -3,6 +3,7 @@ import {
   GENDER_IDENTITY_VALUES,
   INTERESTED_IN_VALUES,
   ONBOARDING_STEP_VALUES,
+  PROFESSION_CATEGORY_VALUES,
   PROFILE_FIELD_VALUES,
   RELATIONSHIP_GOAL_VALUES,
   SHIFT_SCHEDULE_VALUES,
@@ -31,6 +32,9 @@ export const identityStepSchema = z.object({
 
 export const professionStepSchema = z.object({
   profession: z.string().trim().min(2, 'Tell us what you do').max(60),
+  professionCategory: z.enum(PROFESSION_CATEGORY_VALUES, {
+    message: 'Pick the category that fits you best',
+  }),
   employerName: z.string().trim().max(80).optional(),
   shiftSchedule: z.enum(SHIFT_SCHEDULE_VALUES),
   shiftNotes: z.string().trim().max(200).optional(),

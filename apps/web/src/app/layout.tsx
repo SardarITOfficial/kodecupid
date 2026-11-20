@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { PwaRegister } from '@/components/pwa-register';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
@@ -8,8 +9,21 @@ export const metadata: Metadata = {
     template: '%s · KodeCupid',
   },
   description:
-    'KodeCupid connects nurses, doctors, first responders and shift workers who understand each other’s schedules.',
+    'KodeCupid connects nurses, doctors, first responders, educators, engineers and technicians who understand each other’s schedules.',
   applicationName: 'KodeCupid',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'KodeCupid',
+    statusBarStyle: 'default',
+  },
 };
 
 export const viewport: Viewport = {
@@ -30,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         <Providers>{children}</Providers>
+        <PwaRegister />
       </body>
     </html>
   );

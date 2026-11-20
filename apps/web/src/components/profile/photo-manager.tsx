@@ -25,7 +25,7 @@ export function PhotoManager({
     setError(null);
     setBusy(true);
     try {
-      const result = await apiUpload<{ photos: ProfilePhotoView[] }>('/profile/me/photos', file);
+      const result = await apiUpload<{ photos: ProfilePhotoView[] }>('/profile/photos', file);
       onChange(result.photos);
     } catch (caught) {
       setError(errorMessage(caught, 'That photo could not be uploaded.'));
@@ -40,7 +40,7 @@ export function PhotoManager({
     setBusy(true);
     try {
       const result = await apiFetch<{ photos: ProfilePhotoView[] }>(
-        `/profile/me/photos/${photoId}`,
+        `/profile/photos/${photoId}`,
         { method: 'DELETE' },
       );
       onChange(result.photos);
@@ -56,7 +56,7 @@ export function PhotoManager({
     setError(null);
     setBusy(true);
     try {
-      const result = await apiFetch<{ photos: ProfilePhotoView[] }>('/profile/me/photos/order', {
+      const result = await apiFetch<{ photos: ProfilePhotoView[] }>('/profile/photos/order', {
         method: 'PATCH',
         body: { photoIds: ordered },
       });

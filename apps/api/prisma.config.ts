@@ -1,16 +1,29 @@
 import 'dotenv/config';
-import { defineConfig, env } from 'prisma/config';
+import { defineConfig } from 'prisma/config';
 
 /**
- * Prisma 7 configuration. The datasource URL lives here (not in schema.prisma)
- * so migrations and the CLI share exactly the same connection string.
+ * Prisma 7 configuration.
+ *
+ * Neon (and most managed Postgres providers) require the *direct* connection for
+ * migrations and seeding: DDL and advisory locks are unreliable through a
+ * transaction-mode pooler. The running API therefore uses the pooled URL while
+ * the CLI uses DATABASE_URL_UNPOOLED, falling back to DATABASE_URL for local
+ * Postgres where only one URL exists.
+ *
+ * Swapping to AWS RDS later only changes these two environment variables.
  */
+const migrationUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
+
+if (!migrationUrl) {
+  throw new Error('Set DATABASE_URL_UNPOOLED (preferred) or DATABASE_URL for Prisma CLI commands.');
+}
+
 export default defineConfig({
   schema: './prisma/schema.prisma',
   migrations: {
     path: './prisma/migrations',
   },
   datasource: {
-    url: env('DATABASE_URL'),
+    url: migrationUrl,
   },
 });

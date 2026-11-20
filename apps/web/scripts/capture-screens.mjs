@@ -10,9 +10,9 @@ const out = new URL('../../../docs/screens/', import.meta.url).pathname.replace(
 const debugCode = process.env.OTP_DEBUG_CODE ?? '246810';
 
 await mkdir(out, { recursive: true });
-
 const browser = await chromium.launch({ headless: true });
 
+// ── Public ──────────────────────────────────────────────────────────────────
 const desktop = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await desktop.goto(`${base}/`, { waitUntil: 'networkidle' });
 await desktop.screenshot({ path: `${out}/01-landing.png` });
@@ -24,7 +24,7 @@ const mobile = await browser.newPage({
 await mobile.goto(`${base}/register`, { waitUntil: 'networkidle' });
 await mobile.screenshot({ path: `${out}/02-register-mobile.png` });
 
-// ── A seeded member's profile (complete profile with photos) ────────────────
+// ── A seeded member's profile ───────────────────────────────────────────────
 const member = await browser.newPage({
   viewport: { width: 390, height: 844 },
   deviceScaleFactor: 2,
@@ -41,7 +41,7 @@ await member.goto(`${base}/profile`, { waitUntil: 'networkidle' });
 await member.waitForTimeout(1200);
 await member.screenshot({ path: `${out}/03-member-profile-mobile.png`, fullPage: true });
 
-// ── Admin area, both roles ──────────────────────────────────────────────────
+// ── Admin area ──────────────────────────────────────────────────────────────
 async function loginAs(email, password, viewport = { width: 1440, height: 960 }) {
   const page = await browser.newPage({ viewport });
   await page.goto(`${base}/admin/login`, { waitUntil: 'networkidle' });
@@ -57,8 +57,32 @@ async function loginAs(email, password, viewport = { width: 1440, height: 960 })
 const superAdmin = await loginAs('admin@kodecupid.test', 'ChangeMe!Admin1');
 await superAdmin.screenshot({ path: `${out}/04-admin-users-super-admin.png` });
 
+await superAdmin.goto(`${base}/admin/roles`, { waitUntil: 'networkidle' });
+await superAdmin.waitForTimeout(800);
+await superAdmin.screenshot({ path: `${out}/05-admin-roles.png` });
+
+await superAdmin.goto(`${base}/admin/audit`, { waitUntil: 'networkidle' });
+await superAdmin.waitForTimeout(800);
+await superAdmin.screenshot({ path: `${out}/06-admin-activity-log.png` });
+
 const moderator = await loginAs('moderator@kodecupid.test', 'ChangeMe!Mod1');
-await moderator.screenshot({ path: `${out}/05-admin-users-moderator.png` });
+await moderator.screenshot({ path: `${out}/07-admin-users-moderator.png` });
+
+// ── Compliance screen (three mandatory documents) ───────────────────────────
+const compliance = await browser.newPage({
+  viewport: { width: 390, height: 900 },
+  deviceScaleFactor: 2,
+});
+const phone = `17${Math.floor(10_000_000 + Math.random() * 89_999_999)}`;
+await compliance.goto(`${base}/register`, { waitUntil: 'networkidle' });
+await compliance.getByLabel('Country').selectOption('BD');
+await compliance.getByLabel('Phone number').fill(phone);
+await compliance.getByRole('button', { name: 'Send my code' }).click();
+await compliance.getByLabel('Verification code').fill(debugCode);
+await compliance.getByRole('button', { name: 'Verify and continue' }).click();
+await compliance.waitForURL(/\/compliance/, { timeout: 30_000 });
+await compliance.waitForTimeout(800);
+await compliance.screenshot({ path: `${out}/08-compliance-mobile.png`, fullPage: true });
 
 await browser.close();
 console.log(`Screenshots written to ${out}`);

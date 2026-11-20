@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { ComplianceDocumentView, MemberSession } from '@kodecupid/shared';
+import type { ComplianceDocumentView, DocumentType, MemberSession } from '@kodecupid/shared';
 import { useSession } from '@/app/providers';
 import { apiFetch, ApiError, errorMessage } from '@/lib/api';
 import { routeAfterAuth } from '@/lib/routing';
@@ -17,6 +17,9 @@ function eighteenYearsAgo(): string {
   return date.toISOString().slice(0, 10);
 }
 
+/** The three documents that must be accepted before onboarding. */
+const REQUIRED_DOCUMENTS: DocumentType[] = ['TERMS', 'COMMUNITY_GUIDELINES', 'SAFETY_TIPS'];
+
 export default function CompliancePage() {
   const router = useRouter();
   const { setMember, logout } = useSession();
@@ -25,8 +28,7 @@ export default function CompliancePage() {
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [confirmAdult, setConfirmAdult] = useState(false);
-  const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptGuidelines, setAcceptGuidelines] = useState(false);
+  const [accepted, setAccepted] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -49,15 +51,16 @@ export default function CompliancePage() {
     };
   }, []);
 
-  const termsVersion = useMemo(
-    () => documents.find((document) => document.type === 'TERMS')?.version ?? '',
+  const versionOf = useMemo(
+    () => (type: DocumentType) => documents.find((document) => document.type === type)?.version ?? '',
     [documents],
   );
-  const guidelinesVersion = useMemo(
-    () => documents.find((document) => document.type === 'COMMUNITY_GUIDELINES')?.version ?? '',
-    [documents],
-  );
+
   const privacy = documents.find((document) => document.type === 'PRIVACY');
+  const requiredDocuments = documents.filter((document) =>
+    REQUIRED_DOCUMENTS.includes(document.type),
+  );
+  const allAccepted = REQUIRED_DOCUMENTS.every((type) => accepted[type]);
 
   async function submit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
@@ -68,8 +71,8 @@ export default function CompliancePage() {
       setFieldError('Enter your date of birth');
       return;
     }
-    if (!confirmAdult || !acceptTerms || !acceptGuidelines) {
-      setError('Please confirm all three statements to continue.');
+    if (!confirmAdult || !allAccepted) {
+      setError('Please confirm all four statements to continue.');
       return;
     }
 
@@ -82,8 +85,10 @@ export default function CompliancePage() {
           confirmAdult: true,
           acceptTerms: true,
           acceptGuidelines: true,
-          termsVersion,
-          guidelinesVersion,
+          acceptSafetyTips: true,
+          termsVersion: versionOf('TERMS'),
+          guidelinesVersion: versionOf('COMMUNITY_GUIDELINES'),
+          safetyTipsVersion: versionOf('SAFETY_TIPS'),
         },
       });
       setMember(session);
@@ -139,7 +144,8 @@ export default function CompliancePage() {
     <div className="pt-2">
       <h1 className="text-2xl font-semibold tracking-tight text-navy">Before we start</h1>
       <p className="mt-2 text-sm text-muted">
-        Two quick legal steps. We only ask once, and we store the date and the version you agreed to.
+        Confirm your age and accept the three documents below. We only ask once, and we store the
+        date and version of each acceptance.
       </p>
 
       <form onSubmit={submit} className="mt-6 space-y-5" noValidate>
@@ -164,47 +170,41 @@ export default function CompliancePage() {
           </div>
         </div>
 
-        {documents
-          .filter((document) => document.type !== 'PRIVACY')
-          .map((document) => (
-            <div key={document.type} className="rounded-card border border-line bg-white p-5">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-navy">{document.title}</h2>
-                <span className="text-xs text-muted">v{document.version}</span>
-              </div>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted">{document.summary}</p>
-
-              <details className="mt-3 rounded-xl bg-alabaster p-3">
-                <summary className="cursor-pointer text-xs font-semibold text-navy">
-                  Read the full text
-                </summary>
-                <div className="mt-2 space-y-2">
-                  {document.sections.map((section) => (
-                    <div key={section.heading}>
-                      <p className="text-xs font-semibold text-charcoal">{section.heading}</p>
-                      <p className="text-xs leading-relaxed text-muted">{section.body}</p>
-                    </div>
-                  ))}
-                </div>
-              </details>
-
-              <div className="mt-3">
-                {document.type === 'TERMS' ? (
-                  <CheckboxRow id="accept-terms" checked={acceptTerms} onChange={setAcceptTerms}>
-                    I accept the <strong>Terms of Service</strong>.
-                  </CheckboxRow>
-                ) : (
-                  <CheckboxRow
-                    id="accept-guidelines"
-                    checked={acceptGuidelines}
-                    onChange={setAcceptGuidelines}
-                  >
-                    I accept the <strong>Community Guidelines &amp; Safety Tips</strong>.
-                  </CheckboxRow>
-                )}
-              </div>
+        {requiredDocuments.map((document) => (
+          <div key={document.type} className="rounded-card border border-line bg-white p-5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-semibold text-navy">{document.title}</h2>
+              <span className="text-xs text-muted">v{document.version}</span>
             </div>
-          ))}
+            <p className="mt-1.5 text-xs leading-relaxed text-muted">{document.summary}</p>
+
+            <details className="mt-3 rounded-xl bg-alabaster p-3">
+              <summary className="cursor-pointer text-xs font-semibold text-navy">
+                Read the full text
+              </summary>
+              <div className="mt-2 space-y-2">
+                {document.sections.map((section) => (
+                  <div key={section.heading}>
+                    <p className="text-xs font-semibold text-charcoal">{section.heading}</p>
+                    <p className="text-xs leading-relaxed text-muted">{section.body}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
+
+            <div className="mt-3">
+              <CheckboxRow
+                id={`accept-${document.type}`}
+                checked={accepted[document.type] ?? false}
+                onChange={(checked) =>
+                  setAccepted((current) => ({ ...current, [document.type]: checked }))
+                }
+              >
+                I accept the <strong>{document.title}</strong>.
+              </CheckboxRow>
+            </div>
+          </div>
+        ))}
 
         {privacy ? (
           <Alert tone="info" title={`${privacy.title} (v${privacy.version})`}>

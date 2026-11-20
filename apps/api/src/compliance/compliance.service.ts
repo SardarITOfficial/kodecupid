@@ -37,7 +37,9 @@ export class ComplianceService {
           ? versions.terms
           : document.type === 'COMMUNITY_GUIDELINES'
             ? versions.guidelines
-            : versions.privacy,
+            : document.type === 'SAFETY_TIPS'
+              ? versions.safetyTips
+              : versions.privacy,
     }));
   }
 
@@ -61,6 +63,14 @@ export class ComplianceService {
         ErrorCode.TERMS_VERSION_MISMATCH,
         'The Community Guidelines were updated. Please review and accept the current version.',
         { expected: versions.guidelines, received: input.guidelinesVersion },
+      );
+    }
+
+    if (input.safetyTipsVersion !== versions.safetyTips) {
+      throw errors.conflict(
+        ErrorCode.TERMS_VERSION_MISMATCH,
+        'The Safety Tips were updated. Please review and accept the current version.',
+        { expected: versions.safetyTips, received: input.safetyTipsVersion },
       );
     }
 
@@ -102,6 +112,7 @@ export class ComplianceService {
           documentType: 'COMMUNITY_GUIDELINES' as const,
           documentVersion: versions.guidelines,
         },
+        { documentType: 'SAFETY_TIPS' as const, documentVersion: versions.safetyTips },
         { documentType: 'PRIVACY' as const, documentVersion: versions.privacy },
       ];
 

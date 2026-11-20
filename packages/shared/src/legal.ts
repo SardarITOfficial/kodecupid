@@ -3,6 +3,7 @@ import type { DocumentType } from './enums';
 export const DEFAULT_LEGAL_VERSIONS: Record<DocumentType, string> = {
   TERMS: '1.0',
   COMMUNITY_GUIDELINES: '1.0',
+  SAFETY_TIPS: '1.0',
   PRIVACY: '1.0',
 };
 
@@ -56,11 +57,11 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
   },
   {
     type: 'COMMUNITY_GUIDELINES',
-    title: 'Community Guidelines & Safety Tips',
+    title: 'Community Guidelines',
     version: DEFAULT_LEGAL_VERSIONS.COMMUNITY_GUIDELINES,
     updatedAt: '2026-01-01',
     summary:
-      'Be kind, be honest, and protect your privacy. Report anything that feels unsafe.',
+      'Be kind, be honest, and report anything that feels unsafe. These rules apply to every member.',
     sections: [
       {
         heading: 'Be kind',
@@ -71,16 +72,38 @@ export const LEGAL_DOCUMENTS: LegalDocument[] = [
         body: 'Use recent photos of yourself and describe your real work and intentions.',
       },
       {
+        heading: 'One account per person',
+        body: 'Do not create accounts for other people or operate multiple profiles.',
+      },
+      {
+        heading: 'Report problems',
+        body: 'Use the report options in the app. Complaints are reviewed by our moderation team.',
+      },
+    ],
+  },
+  {
+    type: 'SAFETY_TIPS',
+    title: 'Safety Tips',
+    version: DEFAULT_LEGAL_VERSIONS.SAFETY_TIPS,
+    updatedAt: '2026-01-01',
+    summary:
+      'Dating safely is a shared responsibility. Read these four rules before you meet anyone.',
+    sections: [
+      {
         heading: 'Protect your privacy',
         body: 'Use the visibility toggles for sensitive details. Keep your exact workplace, home address, and financial information to yourself until you trust someone.',
       },
       {
         heading: 'Meet safely',
-        body: 'Choose a public place, arrange your own transport, and check in with someone you trust.',
+        body: 'Meet in a public place, arrange your own transport, and tell someone you trust where you are going.',
       },
       {
-        heading: 'Report problems',
-        body: 'Use the report options in the app. Complaints are reviewed by our moderation team.',
+        heading: 'Never send money',
+        body: 'No legitimate match will ask for money, gift cards, or cryptocurrency. Treat requests like this as fraud and report them.',
+      },
+      {
+        heading: 'Take your time',
+        body: 'You are never obligated to meet, share photos, or continue a conversation. Blocking and reporting are always available.',
       },
     ],
   },

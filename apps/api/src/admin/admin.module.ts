@@ -7,6 +7,7 @@ import { AdminsController } from './admins.controller';
 import { AdminsService } from './admins.service';
 import { AuditService } from './audit.service';
 import { PermissionsGuard } from './permissions.guard';
+import { AdminRolesController } from './roles.controller';
 import { AdminShellsController } from './shells.controller';
 import { AdminUsersController } from './users.controller';
 import { AdminUsersService } from './users.service';
@@ -16,6 +17,7 @@ import { AdminUsersService } from './users.service';
   controllers: [
     AdminAuthController,
     AdminsController,
+    AdminRolesController,
     AdminUsersController,
     AdminShellsController,
   ],

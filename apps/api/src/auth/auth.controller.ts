@@ -35,6 +35,16 @@ export class AuthController {
     return this.auth.requestOtp(body, meta);
   }
 
+  /** Milestone 1 contract path (`/auth/otp/request` stays as an alias). */
+  @Post('request-otp')
+  @HttpCode(200)
+  requestOtpCanonical(
+    @Body(new ZodValidationPipe(otpRequestSchema)) body: OtpRequestInput,
+    @ClientMeta() meta: RequestMeta,
+  ): Promise<OtpRequestResult> {
+    return this.auth.requestOtp(body, meta);
+  }
+
   @Post('otp/verify')
   @HttpCode(200)
   async verifyOtp(
@@ -52,6 +62,17 @@ export class AuthController {
       refreshTtlMs: this.tokens.refreshTtlMs,
     });
     return { created: result.created, session: result.session };
+  }
+
+  /** Milestone 1 contract path (`/auth/otp/verify` stays as an alias). */
+  @Post('verify-otp')
+  @HttpCode(200)
+  verifyOtpCanonical(
+    @Body(new ZodValidationPipe(otpVerifySchema)) body: OtpVerifyInput,
+    @ClientMeta() meta: RequestMeta,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ created: boolean; session: MemberSession }> {
+    return this.verifyOtp(body, meta, response);
   }
 
   @Post('refresh')

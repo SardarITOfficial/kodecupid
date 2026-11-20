@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { AdminSession, MemberSession } from '@kodecupid/shared';
 import { apiFetch, ApiError } from '@/lib/api';
 
@@ -17,7 +18,25 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+/** Routes that actually need a member session. */
+const MEMBER_PREFIXES = ['/app', '/profile', '/settings', '/onboarding'];
+/** Admin routes exist under /admin, but the login pages must not probe for a session. */
+const ADMIN_PREFIXES = ['/admin'];
+const ADMIN_PUBLIC_PATHS = ['/admin/login', '/admin/accept-invite'];
+
+function needsMemberSession(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return MEMBER_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function needsAdminSession(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (ADMIN_PUBLIC_PATHS.includes(pathname)) return false;
+  return ADMIN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [member, setMemberState] = useState<MemberSession | null>(null);
   const [admin, setAdminState] = useState<AdminSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -28,9 +47,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       setMemberState(session);
       return session;
     } catch (error) {
-      if (error instanceof ApiError) {
-        setMemberState(null);
-        return null;
+      if (!(error instanceof ApiError)) {
+        // Network failures are treated like signed-out rather than crashing the app.
       }
       setMemberState(null);
       return null;
@@ -50,14 +68,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Public pages never ask for a session, so an anonymous visitor produces no
+    // 401 noise in the console and no wasted round trips.
+    const wantMember = needsMemberSession(pathname);
+    const wantAdmin = needsAdminSession(pathname);
+
+    if (!wantMember && !wantAdmin) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     (async () => {
-      await Promise.all([refreshMember(), refreshAdmin()]);
+      await Promise.all([wantMember ? refreshMember() : null, wantAdmin ? refreshAdmin() : null]);
       if (!cancelled) setLoading(false);
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [refreshAdmin, refreshMember]);
+  }, [pathname, refreshAdmin, refreshMember]);
 
   const logout = useCallback(async () => {
     await apiFetch('/auth/logout', { method: 'POST' }).catch(() => undefined);

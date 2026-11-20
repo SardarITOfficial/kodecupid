@@ -81,6 +81,14 @@ export const ADMIN_NAV: AdminNavItem[] = [
     milestone: 1,
   },
   {
+    key: 'audit',
+    label: 'Activity log',
+    href: '/admin/audit',
+    permission: 'audit.read',
+    description: 'Every privileged action, who did it and when',
+    milestone: 1,
+  },
+  {
     key: 'verification',
     label: 'Verification',
     href: '/admin/verification',

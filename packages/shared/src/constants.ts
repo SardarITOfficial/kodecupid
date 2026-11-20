@@ -8,6 +8,9 @@ export const OTP_LENGTH = 6;
 export const OTP_TTL_MINUTES = 5;
 export const OTP_MAX_ATTEMPTS = 5;
 export const OTP_RESEND_COOLDOWN_SECONDS = 60;
+/** Milestone 1 requirement: at most 3 OTP requests per phone number per 15 min. */
+export const OTP_REQUESTS_PER_WINDOW = 3;
+export const OTP_REQUEST_WINDOW_MINUTES = 15;
 
 /* Profile media */
 export const MAX_PHOTOS = 6;

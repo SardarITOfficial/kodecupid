@@ -48,8 +48,8 @@ export default function SettingsPage() {
     setError(null);
     try {
       const updated = await apiFetch<ProfileOwnerView>(
-        nextPaused ? '/profile/me/pause' : '/profile/me/resume',
-        { method: 'POST' },
+        nextPaused ? '/profile/pause' : '/profile/resume',
+        { method: 'PATCH' },
       );
       setProfile(updated);
     } catch (caught) {

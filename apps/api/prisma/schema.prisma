@@ -42,6 +42,20 @@ enum InterestedIn {
   EVERYONE
 }
 
+/// Profession categories required by Milestone 1 (healthcare, education, EMS,
+/// law enforcement, firefighters, military/veterans, engineers, technicians).
+enum ProfessionCategory {
+  HEALTHCARE
+  EDUCATION
+  EMS
+  LAW_ENFORCEMENT
+  FIREFIGHTER
+  MILITARY_VETERAN
+  ENGINEER
+  TECHNICIAN
+  OTHER
+}
+
 enum ShiftSchedule {
   DAY
   NIGHT
@@ -152,6 +166,7 @@ enum ProfileField {
 enum DocumentType {
   TERMS
   COMMUNITY_GUIDELINES
+  SAFETY_TIPS
   PRIVACY
 }
 
@@ -286,6 +301,7 @@ model Profile {
   interestedIn        InterestedIn[]      @default([])
 
   profession   String?
+  professionCategory ProfessionCategory?
   employerName String?
   shiftSchedule ShiftSchedule?
   shiftNotes   String?
@@ -316,11 +332,12 @@ model Profile {
 
   bio String? @db.VarChar(1000)
 
-  // Workplace privacy / geofencing groundwork (Milestone 3).
-  workplaceName       String?
-  workplaceLatitude   Float?
-  workplaceLongitude  Float?
-  workplaceRadiusM    Int?
+  // Workplace privacy / geofencing groundwork (full geofencing arrives later).
+  workplaceName                String?
+  workplaceLatitude            Float?
+  workplaceLongitude           Float?
+  workplacePrivacyEnabled      Boolean @default(false)
+  workplaceHideRadiusMeters    Int?
 
   status   ProfileStatus @default(ACTIVE)
   pausedAt DateTime?
@@ -384,8 +401,38 @@ model UserPreference {
   @@map("user_preferences")
 }
 
-/* ─────────────────────────────── Admin ────────────────────────────── */
+/* ──────────────────────────────── Regions ─────────────────────────── */
 
+enum RegionLaunchStatus {
+  PLANNED
+  PRE_LAUNCH
+  LAUNCHED
+  PAUSED
+}
+
+/// Metro launch planning. Milestone 1 seeds Atlanta and Charlotte; a region
+/// opens for matching once its paid subscriber count reaches the threshold.
+model Region {
+  id                      String             @id @default(cuid())
+  slug                    String             @unique
+  name                    String
+  state                   String
+  country                 String             @default("US")
+  latitude                Float
+  longitude               Float
+  locationPoint           Unsupported("geography(Point, 4326)")?
+  launchStatus            RegionLaunchStatus @default(PLANNED)
+  paidSubscriberThreshold Int                @default(200)
+  paidSubscriberCount     Int                @default(0)
+  launchedAt              DateTime?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+
+  @@index([launchStatus])
+  @@map("regions")
+}
+
+/* ─────────────────────────────── Admin ────────────────────────────── */
 model AdminUser {
   id           String      @id @default(cuid())
   email        String      @unique

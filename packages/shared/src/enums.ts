@@ -52,6 +52,31 @@ export const SHIFT_SCHEDULE_LABELS: Record<ShiftSchedule, string> = {
   OTHER: 'Other',
 };
 
+/** Profession groups required for launch. */
+export const PROFESSION_CATEGORY_VALUES = [
+  'HEALTHCARE',
+  'EDUCATION',
+  'EMS',
+  'LAW_ENFORCEMENT',
+  'FIREFIGHTER',
+  'MILITARY_VETERAN',
+  'ENGINEER',
+  'TECHNICIAN',
+  'OTHER',
+] as const;
+export type ProfessionCategory = (typeof PROFESSION_CATEGORY_VALUES)[number];
+export const PROFESSION_CATEGORY_LABELS: Record<ProfessionCategory, string> = {
+  HEALTHCARE: 'Healthcare',
+  EDUCATION: 'Education',
+  EMS: 'EMS',
+  LAW_ENFORCEMENT: 'Law enforcement',
+  FIREFIGHTER: 'Firefighters',
+  MILITARY_VETERAN: 'Military & veterans',
+  ENGINEER: 'Engineers',
+  TECHNICIAN: 'Technicians',
+  OTHER: 'Other',
+};
+
 export const LIFESTYLE_VALUES = ['NEVER', 'RARELY', 'SOCIALLY', 'OFTEN', 'DAILY'] as const;
 export type Lifestyle = (typeof LIFESTYLE_VALUES)[number];
 export const LIFESTYLE_LABELS: Record<Lifestyle, string> = {
@@ -234,12 +259,34 @@ export const PROFILE_FIELD_LABELS: Record<ProfileField, string> = {
 
 /* ────────────────────────── Legal & accounts ──────────────────────── */
 
-export const DOCUMENT_TYPE_VALUES = ['TERMS', 'COMMUNITY_GUIDELINES', 'PRIVACY'] as const;
+export const DOCUMENT_TYPE_VALUES = [
+  'TERMS',
+  'COMMUNITY_GUIDELINES',
+  'SAFETY_TIPS',
+  'PRIVACY',
+] as const;
 export type DocumentType = (typeof DOCUMENT_TYPE_VALUES)[number];
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   TERMS: 'Terms of Service',
-  COMMUNITY_GUIDELINES: 'Community Guidelines & Safety Tips',
+  COMMUNITY_GUIDELINES: 'Community Guidelines',
+  SAFETY_TIPS: 'Safety Tips',
   PRIVACY: 'Privacy Policy',
+};
+
+/* ──────────────────────────── Regions ─────────────────────────────── */
+
+export const REGION_LAUNCH_STATUS_VALUES = [
+  'PLANNED',
+  'PRE_LAUNCH',
+  'LAUNCHED',
+  'PAUSED',
+] as const;
+export type RegionLaunchStatus = (typeof REGION_LAUNCH_STATUS_VALUES)[number];
+export const REGION_LAUNCH_STATUS_LABELS: Record<RegionLaunchStatus, string> = {
+  PLANNED: 'Planned',
+  PRE_LAUNCH: 'Pre-launch',
+  LAUNCHED: 'Launched',
+  PAUSED: 'Paused',
 };
 
 export const USER_STATUS_VALUES = [

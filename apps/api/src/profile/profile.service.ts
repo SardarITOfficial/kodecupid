@@ -101,6 +101,7 @@ export class ProfileService {
     if (input.interestedIn !== undefined) data.interestedIn = input.interestedIn;
 
     if (input.profession !== undefined) data.profession = input.profession;
+    if (input.professionCategory !== undefined) data.professionCategory = input.professionCategory;
     if (input.employerName !== undefined) data.employerName = input.employerName;
     if (input.shiftSchedule !== undefined) data.shiftSchedule = input.shiftSchedule;
     if (input.shiftNotes !== undefined) data.shiftNotes = input.shiftNotes;
@@ -132,7 +133,12 @@ export class ProfileService {
     if (input.workplaceName !== undefined) data.workplaceName = input.workplaceName;
     if (input.workplaceLatitude !== undefined) data.workplaceLatitude = input.workplaceLatitude;
     if (input.workplaceLongitude !== undefined) data.workplaceLongitude = input.workplaceLongitude;
-    if (input.workplaceRadiusM !== undefined) data.workplaceRadiusM = input.workplaceRadiusM;
+    if (input.workplacePrivacyEnabled !== undefined) {
+      data.workplacePrivacyEnabled = input.workplacePrivacyEnabled;
+    }
+    if (input.workplaceHideRadiusMeters !== undefined) {
+      data.workplaceHideRadiusMeters = input.workplaceHideRadiusMeters;
+    }
 
     const updated = await this.prisma.profile.update({
       where: { userId },

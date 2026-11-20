@@ -37,3 +37,21 @@ export const updateMemberStatusSchema = z.object({
 });
 
 export type UpdateMemberStatusInput = z.infer<typeof updateMemberStatusSchema>;
+
+/**
+ * Role assignment by email. If the email already belongs to an admin the role
+ * is applied immediately; otherwise a pending invitation is created and the
+ * response carries a one-time token to hand over.
+ */
+export const roleAssignSchema = z.object({
+  email: emailSchema,
+  role: z.enum(ADMIN_ROLE_VALUES),
+});
+
+export type RoleAssignInput = z.infer<typeof roleAssignSchema>;
+
+export const roleUpdateSchema = z.object({
+  role: z.enum(ADMIN_ROLE_VALUES),
+});
+
+export type RoleUpdateInput = z.infer<typeof roleUpdateSchema>;

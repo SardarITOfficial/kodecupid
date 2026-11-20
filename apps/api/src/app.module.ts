@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileModule } from './profile/profile.module';
+import { RegionsModule } from './regions/regions.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { StorageModule } from './storage/storage.module';
     ProfileModule,
     OnboardingModule,
     AdminModule,
+    RegionsModule,
   ],
 })
 export class AppModule {}
