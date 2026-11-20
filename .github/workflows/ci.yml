@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @kodecupid/shared build
+
+      - name: Generate Prisma client
+        run: pnpm --filter api exec prisma generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    name: API end-to-end (needs the e2e secret)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: kodecupid
+          POSTGRES_PASSWORD: kodecupid
+          POSTGRES_DB: kodecupid
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kodecupid"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://kodecupid:kodecupid@localhost:5432/kodecupid?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-0000000000000000000000000000
+      JWT_REFRESH_SECRET: ci-refresh-secret-000000000000000000000000000
+      OTP_ALLOW_DEBUG_CODE: "true"
+      OTP_DEBUG_CODE: "246810"
+      SMS_PROVIDER: console
+      TERMS_VERSION: "1.0"
+      GUIDELINES_VERSION: "1.0"
+      SEED_ADMIN_EMAIL: admin@kodecupid.test
+      SEED_ADMIN_PASSWORD: ChangeMe!Admin1
+      SEED_MODERATOR_EMAIL: moderator@kodecupid.test
+      SEED_MODERATOR_PASSWORD: ChangeMe!Mod1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @kodecupid/shared build
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm --filter api db:deploy
+      - run: pnpm --filter api db:seed
+      - run: pnpm --filter api test:e2e

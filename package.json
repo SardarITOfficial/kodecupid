@@ -1,0 +1,30 @@
+{
+  "name": "kodecupid",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KodeCupid - Milestone 1 (registration, onboarding, profile privacy, admin roles)",
+  "packageManager": "pnpm@10.18.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "build": "pnpm --filter @kodecupid/shared build && pnpm --filter api build && pnpm --filter web build",
+    "dev": "pnpm --filter @kodecupid/shared build && pnpm -r --parallel --filter api --filter web dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm --filter api test:e2e",
+    "test:web": "pnpm --filter web test:e2e",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:migrate:new": "pnpm --filter api db:migrate:new",
+    "db:deploy": "pnpm --filter api db:deploy",
+    "db:seed": "pnpm --filter api db:seed",
+    "db:studio": "pnpm --filter api db:studio",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "prettier": "^3.10.1",
+    "typescript": "5.9.3"
+  }
+}

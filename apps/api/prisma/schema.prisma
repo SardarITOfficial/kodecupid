@@ -1,0 +1,459 @@
+// KodeCupid — Milestone 1 data model
+// PostgreSQL 16 + PostGIS. The generated client is emitted to src/generated/prisma
+// (Prisma 7 requires an explicit output path and module format).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/* ─────────────────────────── Enumerations ─────────────────────────── */
+
+enum UserStatus {
+  PENDING_COMPLIANCE
+  ACTIVE
+  SUSPENDED
+  DELETION_REQUESTED
+  DELETED
+}
+
+enum OtpPurpose {
+  REGISTER
+  LOGIN
+}
+
+enum GenderIdentity {
+  WOMAN
+  MAN
+  NON_BINARY
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum InterestedIn {
+  WOMEN
+  MEN
+  NON_BINARY_PEOPLE
+  EVERYONE
+}
+
+enum ShiftSchedule {
+  DAY
+  NIGHT
+  ROTATING
+  FLEXIBLE
+  ON_CALL
+  OTHER
+}
+
+enum Lifestyle {
+  NEVER
+  RARELY
+  SOCIALLY
+  OFTEN
+  DAILY
+}
+
+enum Exercise {
+  NEVER
+  SOMETIMES
+  REGULARLY
+  DAILY
+}
+
+enum EducationLevel {
+  HIGH_SCHOOL
+  ASSOCIATE
+  BACHELORS
+  MASTERS
+  DOCTORATE
+  PROFESSIONAL
+  OTHER
+}
+
+enum Credential {
+  MD
+  DO
+  RN
+  NP
+  PA
+  PHD
+  JD
+  DDS
+  PHARMD
+  EMT
+  LPN
+  CNA
+  OTHER
+}
+
+enum RelationshipGoal {
+  LONG_TERM
+  LIFE_PARTNER
+  CASUAL
+  FRIENDSHIP
+  OPEN_TO_ANYTHING
+}
+
+enum FamilyPlans {
+  WANT_CHILDREN
+  OPEN_TO_CHILDREN
+  DONT_WANT_CHILDREN
+  HAVE_CHILDREN_WANT_MORE
+  HAVE_CHILDREN_NO_MORE
+  UNDECIDED
+}
+
+enum Kids {
+  NO_KIDS
+  HAVE_KIDS
+  PREFER_NOT_TO_SAY
+}
+
+enum ProfileStatus {
+  ACTIVE
+  PAUSED
+}
+
+enum VisibilityLevel {
+  PUBLIC
+  HIDDEN
+  MATCHED
+}
+
+enum ProfileField {
+  DISPLAY_NAME
+  AGE
+  GENDER_IDENTITY
+  INTERESTED_IN
+  LOCATION
+  PROFESSION
+  SHIFT_SCHEDULE
+  WORKPLACE
+  RELIGION
+  ETHNICITY
+  LANGUAGES
+  HEIGHT
+  LIFESTYLE
+  EDUCATION
+  CREDENTIALS
+  RELATIONSHIP_GOALS
+  FAMILY_PLANS
+  KIDS
+  BIO
+  PHOTOS
+}
+
+enum DocumentType {
+  TERMS
+  COMMUNITY_GUIDELINES
+  PRIVACY
+}
+
+enum OnboardingStep {
+  welcome
+  identity
+  profession
+  location
+  preferences
+  privacy
+  complete
+}
+
+enum PhotoModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  MODERATOR
+}
+
+enum AdminStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+/* ────────────────────────────── Members ───────────────────────────── */
+
+model User {
+  id                    String        @id @default(cuid())
+  phoneE164             String        @unique
+  phoneCountry          String
+  status                UserStatus    @default(PENDING_COMPLIANCE)
+  phoneVerifiedAt       DateTime?
+  ageVerifiedAt         DateTime?
+  onboardingCompletedAt DateTime?
+  lastLoginAt           DateTime?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  profile          Profile?
+  onboarding       OnboardingProgress?
+  preferences      UserPreference?
+  legalAcceptances LegalAcceptance[]
+  sessions         Session[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model OtpChallenge {
+  id         String     @id @default(cuid())
+  phoneE164  String
+  codeHash   String
+  purpose    OtpPurpose @default(REGISTER)
+  expiresAt  DateTime
+  attempts   Int        @default(0)
+  consumedAt DateTime?
+  ip         String?
+  createdAt  DateTime   @default(now())
+
+  @@index([phoneE164, createdAt])
+  @@map("otp_challenges")
+}
+
+model Session {
+  id           String    @id @default(cuid())
+  userId       String
+  tokenHash    String    @unique
+  userAgent    String?
+  ip           String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model LegalAcceptance {
+  id              String       @id @default(cuid())
+  userId          String
+  documentType    DocumentType
+  documentVersion String
+  acceptedAt      DateTime     @default(now())
+  ip              String?
+  userAgent       String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentType, documentVersion])
+  @@index([userId])
+  @@map("legal_acceptances")
+}
+
+model OnboardingProgress {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  currentStep    OnboardingStep @default(welcome)
+  completedSteps OnboardingStep[] @default([])
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_progress")
+}
+
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  displayName         String?
+  dateOfBirth         DateTime?           @db.Date
+  genderIdentity      GenderIdentity?
+  genderIdentityOther String?
+  interestedIn        InterestedIn[]      @default([])
+
+  profession   String?
+  employerName String?
+  shiftSchedule ShiftSchedule?
+  shiftNotes   String?
+
+  city       String?
+  region     String?
+  country    String?
+  latitude   Float?
+  longitude  Float?
+  /// Generated by PostgreSQL from latitude/longitude; used for future geofencing.
+  locationPoint Unsupported("geography(Point, 4326)")?
+
+  religion      String?
+  ethnicity     String?
+  languages     String[]  @default([])
+  heightCm      Int?
+  drinking      Lifestyle?
+  smoking       Lifestyle?
+  cannabis      Lifestyle?
+  exercise      Exercise?
+
+  educationLevel EducationLevel?
+  credentials    Credential[]   @default([])
+
+  relationshipGoals RelationshipGoal[] @default([])
+  familyPlans       FamilyPlans?
+  kids              Kids?
+
+  bio String? @db.VarChar(1000)
+
+  // Workplace privacy / geofencing groundwork (Milestone 3).
+  workplaceName       String?
+  workplaceLatitude   Float?
+  workplaceLongitude  Float?
+  workplaceRadiusM    Int?
+
+  status   ProfileStatus @default(ACTIVE)
+  pausedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visibility ProfileFieldVisibility[]
+  photos     ProfilePhoto[]
+
+  @@index([status])
+  @@index([city])
+  @@map("profiles")
+}
+
+model ProfileFieldVisibility {
+  id         String          @id @default(cuid())
+  profileId  String
+  field      ProfileField
+  visibility VisibilityLevel @default(PUBLIC)
+  updatedAt  DateTime        @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, field])
+  @@map("profile_field_visibility")
+}
+
+model ProfilePhoto {
+  id               String                @id @default(cuid())
+  profileId        String
+  storageKey       String
+  mimeType         String
+  sizeBytes        Int
+  width            Int?
+  height           Int?
+  sortOrder        Int                   @default(0)
+  isPrimary        Boolean               @default(false)
+  moderationStatus PhotoModerationStatus @default(PENDING)
+  createdAt        DateTime              @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("profile_photos")
+}
+
+model UserPreference {
+  id            String            @id @default(cuid())
+  userId        String            @unique
+  lookingFor    RelationshipGoal[] @default([])
+  ageRangeMin   Int               @default(18)
+  ageRangeMax   Int               @default(99)
+  maxDistanceKm Int               @default(50)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+/* ─────────────────────────────── Admin ────────────────────────────── */
+
+model AdminUser {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  name         String
+  passwordHash String
+  role         AdminRole   @default(MODERATOR)
+  status       AdminStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdById  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  sessions    AdminSession[]
+  invitations AdminInvitation[]
+  auditLogs   AdminAuditLog[]
+
+  @@index([role])
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id           String    @id @default(cuid())
+  adminId      String
+  tokenHash    String    @unique
+  userAgent    String?
+  ip           String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?
+  createdAt    DateTime  @default(now())
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_sessions")
+}
+
+model AdminInvitation {
+  id           String           @id @default(cuid())
+  email        String
+  role         AdminRole
+  tokenHash    String           @unique
+  status       InvitationStatus @default(PENDING)
+  invitedById  String?
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime         @default(now())
+
+  invitedBy AdminUser? @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([status])
+  @@map("admin_invitations")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  admin AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}

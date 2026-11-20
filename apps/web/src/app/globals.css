@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+/*
+ * KodeCupid brand palette — the six official colors.
+ * Crimson and Navy carry the brand; Gold is used sparingly for "verified"
+ * and premium accents so it keeps its meaning.
+ */
+@theme {
+  --color-crimson: #d91e36;
+  --color-crimson-dark: #b3172c;
+  --color-crimson-soft: #fdecee;
+  --color-navy: #16263e;
+  --color-navy-light: #1f3455;
+  --color-alabaster: #f7f8fa;
+  --color-gold: #d99b26;
+  --color-gold-soft: #fdf4e3;
+  --color-charcoal: #2d3748;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif;
+
+  --radius-card: 1.25rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-alabaster);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible, brand-colored focus ring for keyboard users on every control. */
+:focus-visible {
+  outline: 2px solid var(--color-crimson);
+  outline-offset: 2px;
+}
+
+::selection {
+  background-color: var(--color-crimson);
+  color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

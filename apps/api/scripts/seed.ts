@@ -1,0 +1,448 @@
+import 'dotenv/config';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { PrismaPg } from '@prisma/adapter-pg';
+import sharp from 'sharp';
+import { hashPassword } from '../src/admin/passwords';
+import { loadEnv } from '../src/config/app-config';
+import { PrismaClient } from '../src/generated/prisma/client';
+import { ONBOARDING_SEQUENCE } from '../src/onboarding/onboarding.sequence';
+
+/**
+ * Idempotent seed:
+ *   1 Super Admin, 1 Moderator, 5 sample members (one paused, one sparse,
+ *   one with photos) so the client can test both admin roles and every privacy
+ *   state without registering first.
+ *
+ * Run with: pnpm db:seed
+ */
+
+const env = loadEnv();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
+});
+
+const LOCAL_STORAGE_DIR = join(process.cwd(), env.STORAGE_LOCAL_DIR);
+
+interface SeedMember {
+  phone: string;
+  phoneCountry: string;
+  displayName: string;
+  dateOfBirth: string;
+  genderIdentity: 'WOMAN' | 'MAN' | 'NON_BINARY' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+  interestedIn: ('WOMEN' | 'MEN' | 'NON_BINARY_PEOPLE' | 'EVERYONE')[];
+  profession: string;
+  employerName?: string;
+  shiftSchedule: 'DAY' | 'NIGHT' | 'ROTATING' | 'FLEXIBLE' | 'ON_CALL' | 'OTHER';
+  city: string;
+  region?: string;
+  country: string;
+  latitude?: number;
+  longitude?: number;
+  religion?: string;
+  ethnicity?: string;
+  languages: string[];
+  heightCm: number;
+  drinking: 'NEVER' | 'RARELY' | 'SOCIALLY' | 'OFTEN' | 'DAILY';
+  smoking: 'NEVER' | 'RARELY' | 'SOCIALLY' | 'OFTEN' | 'DAILY';
+  exercise: 'NEVER' | 'SOMETIMES' | 'REGULARLY' | 'DAILY';
+  educationLevel: 'HIGH_SCHOOL' | 'ASSOCIATE' | 'BACHELORS' | 'MASTERS' | 'DOCTORATE' | 'PROFESSIONAL' | 'OTHER';
+  credentials: ('MD' | 'DO' | 'RN' | 'NP' | 'PA' | 'PHD' | 'JD' | 'DDS' | 'PHARMD' | 'EMT' | 'LPN' | 'CNA' | 'OTHER')[];
+  relationshipGoals: ('LONG_TERM' | 'LIFE_PARTNER' | 'CASUAL' | 'FRIENDSHIP' | 'OPEN_TO_ANYTHING')[];
+  familyPlans: 'WANT_CHILDREN' | 'OPEN_TO_CHILDREN' | 'DONT_WANT_CHILDREN' | 'HAVE_CHILDREN_WANT_MORE' | 'HAVE_CHILDREN_NO_MORE' | 'UNDECIDED';
+  kids: 'NO_KIDS' | 'HAVE_KIDS' | 'PREFER_NOT_TO_SAY';
+  bio: string;
+  paused?: boolean;
+  photos?: number;
+  accent?: string;
+  /** Explicit privacy overrides on top of the sensible defaults. */
+  visibility?: { field: string; visibility: 'PUBLIC' | 'HIDDEN' }[];
+}
+
+const MEMBERS: SeedMember[] = [
+  {
+    phone: '+8801711000001',
+    phoneCountry: 'BD',
+    displayName: 'Ayesha R.',
+    dateOfBirth: '1997-03-14',
+    genderIdentity: 'WOMAN',
+    interestedIn: ['MEN'],
+    profession: 'Registered Nurse',
+    employerName: 'Dhaka Medical College Hospital',
+    shiftSchedule: 'NIGHT',
+    city: 'Dhaka',
+    region: 'Dhaka Division',
+    country: 'BD',
+    latitude: 23.8103,
+    longitude: 90.4125,
+    religion: 'Islam',
+    ethnicity: 'Bengali',
+    languages: ['Bengali', 'English'],
+    heightCm: 163,
+    drinking: 'NEVER',
+    smoking: 'NEVER',
+    exercise: 'SOMETIMES',
+    educationLevel: 'BACHELORS',
+    credentials: ['RN'],
+    relationshipGoals: ['LONG_TERM'],
+    familyPlans: 'OPEN_TO_CHILDREN',
+    kids: 'NO_KIDS',
+    bio: 'Night-shift nurse, coffee enthusiast and amateur baker. Looking for someone who understands odd hours and still wants real weekends.',
+    photos: 2,
+    accent: '#D91E36',
+    visibility: [{ field: 'RELIGION', visibility: 'PUBLIC' }],
+  },
+  {
+    phone: '+14155550101',
+    phoneCountry: 'US',
+    displayName: 'Marcus L.',
+    dateOfBirth: '1992-07-02',
+    genderIdentity: 'MAN',
+    interestedIn: ['WOMEN'],
+    profession: 'Paramedic',
+    employerName: 'SFFD',
+    shiftSchedule: 'ROTATING',
+    city: 'San Francisco',
+    region: 'California',
+    country: 'US',
+    latitude: 37.7749,
+    longitude: -122.4194,
+    ethnicity: 'Asian',
+    languages: ['English', 'Tagalog'],
+    heightCm: 180,
+    drinking: 'SOCIALLY',
+    smoking: 'NEVER',
+    exercise: 'REGULARLY',
+    educationLevel: 'ASSOCIATE',
+    credentials: ['EMT'],
+    relationshipGoals: ['LONG_TERM', 'LIFE_PARTNER'],
+    familyPlans: 'WANT_CHILDREN',
+    kids: 'NO_KIDS',
+    bio: '24-hour shifts, trail runs on my days off. I cook a mean adobo and I am terrible at board games.',
+    photos: 1,
+    accent: '#16263E',
+  },
+  {
+    phone: '+14155550102',
+    phoneCountry: 'US',
+    displayName: 'Sofia A.',
+    dateOfBirth: '1999-11-23',
+    genderIdentity: 'WOMAN',
+    interestedIn: ['EVERYONE'],
+    profession: 'Nurse Practitioner',
+    employerName: 'Ascension Seton',
+    shiftSchedule: 'DAY',
+    city: 'Austin',
+    region: 'Texas',
+    country: 'US',
+    latitude: 30.2672,
+    longitude: -97.7431,
+    religion: 'Catholic',
+    languages: ['English', 'Spanish'],
+    heightCm: 168,
+    drinking: 'RARELY',
+    smoking: 'NEVER',
+    exercise: 'REGULARLY',
+    educationLevel: 'MASTERS',
+    credentials: ['NP', 'RN'],
+    relationshipGoals: ['LONG_TERM'],
+    familyPlans: 'OPEN_TO_CHILDREN',
+    kids: 'NO_KIDS',
+    bio: 'Primary care NP. Live music, tacos and long walks with my rescue dog Peppa.',
+    photos: 1,
+    accent: '#D99B26',
+  },
+  {
+    phone: '+14155550103',
+    phoneCountry: 'US',
+    displayName: 'Dev P.',
+    dateOfBirth: '1995-01-09',
+    genderIdentity: 'MAN',
+    interestedIn: ['WOMEN', 'NON_BINARY_PEOPLE'],
+    profession: 'Pharmacist',
+    employerName: 'Mount Sinai',
+    shiftSchedule: 'NIGHT',
+    city: 'New York',
+    region: 'New York',
+    country: 'US',
+    latitude: 40.7128,
+    longitude: -74.006,
+    ethnicity: 'South Asian',
+    languages: ['English', 'Hindi', 'Gujarati'],
+    heightCm: 175,
+    drinking: 'NEVER',
+    smoking: 'NEVER',
+    exercise: 'SOMETIMES',
+    educationLevel: 'DOCTORATE',
+    credentials: ['PHARMD'],
+    relationshipGoals: ['CASUAL', 'FRIENDSHIP'],
+    familyPlans: 'UNDECIDED',
+    kids: 'NO_KIDS',
+    bio: 'Overnight pharmacist. I know every 24-hour diner in Manhattan and I am not sorry.',
+    paused: true,
+    accent: '#2D3748',
+    visibility: [{ field: 'PROFESSION', visibility: 'HIDDEN' }],
+  },
+  {
+    phone: '+14155550104',
+    phoneCountry: 'US',
+    displayName: 'Nora H.',
+    dateOfBirth: '1988-05-30',
+    genderIdentity: 'WOMAN',
+    interestedIn: ['MEN', 'WOMEN'],
+    profession: 'Emergency Physician',
+    employerName: 'Northwestern Memorial',
+    shiftSchedule: 'ROTATING',
+    city: 'Chicago',
+    region: 'Illinois',
+    country: 'US',
+    latitude: 41.8781,
+    longitude: -87.6298,
+    languages: ['English', 'Arabic'],
+    heightCm: 170,
+    drinking: 'SOCIALLY',
+    smoking: 'NEVER',
+    exercise: 'SOMETIMES',
+    educationLevel: 'PROFESSIONAL',
+    credentials: ['MD'],
+    relationshipGoals: ['LIFE_PARTNER'],
+    familyPlans: 'HAVE_CHILDREN_NO_MORE',
+    kids: 'HAVE_KIDS',
+    bio: 'ER doc, mother of one very opinionated seven-year-old. Looking for someone kind and unbothered by pagers.',
+    accent: '#8B5CF6',
+    visibility: [
+      { field: 'RELIGION', visibility: 'PUBLIC' },
+      { field: 'ETHNICITY', visibility: 'PUBLIC' },
+    ],
+  },
+];
+
+async function seedAdmin(
+  email: string,
+  name: string,
+  role: 'SUPER_ADMIN' | 'MODERATOR',
+  password: string,
+): Promise<void> {
+  const passwordHash = await hashPassword(password);
+  await prisma.adminUser.upsert({
+    where: { email },
+    create: { email, name, role, passwordHash, status: 'ACTIVE' },
+    update: { name, role, passwordHash, status: 'ACTIVE' },
+  });
+}
+
+async function seedPhoto(profileId: string, index: number, accent: string): Promise<void> {
+  await mkdir(LOCAL_STORAGE_DIR, { recursive: true });
+  const key = `seed_${profileId.slice(-10)}_${index}.webp`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${accent}" />
+          <stop offset="100%" stop-color="#16263E" />
+        </linearGradient>
+      </defs>
+      <rect width="800" height="1000" fill="url(#g)" />
+      <circle cx="400" cy="420" r="150" fill="rgba(255,255,255,0.14)" />
+      <text x="400" y="470" font-family="Arial, sans-serif" font-size="96" fill="#FFFFFF"
+        text-anchor="middle">KC</text>
+      <text x="400" y="560" font-family="Arial, sans-serif" font-size="34" fill="#F7F8FA"
+        text-anchor="middle">Sample photo ${index + 1}</text>
+    </svg>`;
+
+  const buffer = await sharp(Buffer.from(svg)).webp({ quality: 82 }).toBuffer();
+  await writeFile(join(LOCAL_STORAGE_DIR, key), buffer);
+
+  await prisma.profilePhoto.create({
+    data: {
+      profileId,
+      storageKey: key,
+      mimeType: 'image/webp',
+      sizeBytes: buffer.byteLength,
+      width: 800,
+      height: 1000,
+      sortOrder: index,
+      isPrimary: index === 0,
+      moderationStatus: 'APPROVED',
+    },
+  });
+}
+
+async function seedMember(member: SeedMember): Promise<string> {
+  const now = new Date();
+  const user = await prisma.user.upsert({
+    where: { phoneE164: member.phone },
+    create: {
+      phoneE164: member.phone,
+      phoneCountry: member.phoneCountry,
+      status: 'ACTIVE',
+      phoneVerifiedAt: now,
+      ageVerifiedAt: now,
+      onboardingCompletedAt: now,
+      lastLoginAt: now,
+    },
+    update: {
+      status: 'ACTIVE',
+      phoneVerifiedAt: now,
+      ageVerifiedAt: now,
+      onboardingCompletedAt: now,
+    },
+  });
+
+  const profileData = {
+    displayName: member.displayName,
+    dateOfBirth: new Date(`${member.dateOfBirth}T00:00:00.000Z`),
+    genderIdentity: member.genderIdentity,
+    interestedIn: member.interestedIn,
+    profession: member.profession,
+    employerName: member.employerName ?? null,
+    shiftSchedule: member.shiftSchedule,
+    city: member.city,
+    region: member.region ?? null,
+    country: member.country,
+    latitude: member.latitude ?? null,
+    longitude: member.longitude ?? null,
+    religion: member.religion ?? null,
+    ethnicity: member.ethnicity ?? null,
+    languages: member.languages,
+    heightCm: member.heightCm,
+    drinking: member.drinking,
+    smoking: member.smoking,
+    exercise: member.exercise,
+    educationLevel: member.educationLevel,
+    credentials: member.credentials,
+    relationshipGoals: member.relationshipGoals,
+    familyPlans: member.familyPlans,
+    kids: member.kids,
+    bio: member.bio,
+    status: member.paused ? ('PAUSED' as const) : ('ACTIVE' as const),
+    pausedAt: member.paused ? now : null,
+  };
+
+  const profile = await prisma.profile.upsert({
+    where: { userId: user.id },
+    create: { userId: user.id, ...profileData },
+    update: profileData,
+  });
+
+  await prisma.userPreference.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      lookingFor: member.relationshipGoals,
+      ageRangeMin: 25,
+      ageRangeMax: 45,
+      maxDistanceKm: 40,
+    },
+    update: { lookingFor: member.relationshipGoals },
+  });
+
+  await prisma.onboardingProgress.upsert({
+    where: { userId: user.id },
+    create: {
+      userId: user.id,
+      completedSteps: ONBOARDING_SEQUENCE,
+      currentStep: 'complete',
+      completedAt: now,
+    },
+    update: { completedSteps: ONBOARDING_SEQUENCE, currentStep: 'complete', completedAt: now },
+  });
+
+  const acceptances = [
+    { documentType: 'TERMS' as const, documentVersion: env.TERMS_VERSION },
+    { documentType: 'COMMUNITY_GUIDELINES' as const, documentVersion: env.GUIDELINES_VERSION },
+    { documentType: 'PRIVACY' as const, documentVersion: env.PRIVACY_VERSION },
+  ];
+
+  for (const acceptance of acceptances) {
+    await prisma.legalAcceptance.upsert({
+      where: {
+        userId_documentType_documentVersion: {
+          userId: user.id,
+          documentType: acceptance.documentType,
+          documentVersion: acceptance.documentVersion,
+        },
+      },
+      create: {
+        userId: user.id,
+        documentType: acceptance.documentType,
+        documentVersion: acceptance.documentVersion,
+      },
+      update: {},
+    });
+  }
+
+  for (const override of member.visibility ?? []) {
+    await prisma.profileFieldVisibility.upsert({
+      where: { profileId_field: { profileId: profile.id, field: override.field as never } },
+      create: {
+        profileId: profile.id,
+        field: override.field as never,
+        visibility: override.visibility,
+      },
+      update: { visibility: override.visibility },
+    });
+  }
+
+  // Recreate photos so re-running the seed never duplicates them.
+  const existingPhotos = await prisma.profilePhoto.findMany({ where: { profileId: profile.id } });
+  for (const photo of existingPhotos) {
+    await prisma.profilePhoto.delete({ where: { id: photo.id } });
+    await unlink(join(LOCAL_STORAGE_DIR, photo.storageKey)).catch(() => undefined);
+  }
+
+  for (let index = 0; index < (member.photos ?? 0); index += 1) {
+    await seedPhoto(profile.id, index, member.accent ?? '#D91E36');
+  }
+
+  return user.id;
+}
+
+async function main(): Promise<void> {
+  console.log('› Seeding KodeCupid…\n');
+
+  await seedAdmin(env.SEED_ADMIN_EMAIL, 'KodeCupid Super Admin', 'SUPER_ADMIN', env.SEED_ADMIN_PASSWORD);
+  await seedAdmin(
+    env.SEED_MODERATOR_EMAIL,
+    'KodeCupid Moderator',
+    'MODERATOR',
+    env.SEED_MODERATOR_PASSWORD,
+  );
+
+  const memberIds: string[] = [];
+  for (const member of MEMBERS) {
+    memberIds.push(await seedMember(member));
+  }
+
+  const memberCount = await prisma.user.count();
+  const adminCount = await prisma.adminUser.count();
+
+  console.log(`✓ Admins: ${adminCount}`);
+  console.log(`✓ Members: ${memberCount} (${memberIds.length} sample profiles seeded)`);
+  console.log('\nAdmin logins');
+  console.log('┌──────────────┬──────────────────────────────┬──────────────────┐');
+  console.log('│ Role         │ Email                        │ Password         │');
+  console.log('├──────────────┼──────────────────────────────┼──────────────────┤');
+  console.log(
+    `│ Super Admin  │ ${env.SEED_ADMIN_EMAIL.padEnd(28)} │ ${env.SEED_ADMIN_PASSWORD.padEnd(16)} │`,
+  );
+  console.log(
+    `│ Moderator    │ ${env.SEED_MODERATOR_EMAIL.padEnd(28)} │ ${env.SEED_MODERATOR_PASSWORD.padEnd(16)} │`,
+  );
+  console.log('└──────────────┴──────────────────────────────┴──────────────────┘');
+  console.log('\nMember phone numbers (OTP works with the debug code in development):');
+  for (const member of MEMBERS) {
+    console.log(
+      `  ${member.phone}  ${member.displayName}${member.paused ? '  [paused]' : ''}`,
+    );
+  }
+  console.log('');
+}
+
+main()
+  .catch((error) => {
+    console.error('\n✗ Seed failed:', error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

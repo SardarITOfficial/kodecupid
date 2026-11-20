@@ -1,0 +1,28 @@
+# KodeCupid local database — PostgreSQL 16 + PostGIS 3.4
+#
+#   docker compose up -d
+#   docker compose logs -f db
+#
+# The API reads DATABASE_URL from apps/api/.env; the default credentials below
+# match .env.example.
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: kodecupid-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kodecupid}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kodecupid}
+      POSTGRES_DB: ${POSTGRES_DB:-kodecupid}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - kodecupid-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-kodecupid} -d ${POSTGRES_DB:-kodecupid}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  kodecupid-pgdata:

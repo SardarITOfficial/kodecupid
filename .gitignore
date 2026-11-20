@@ -1,0 +1,46 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# generated Prisma client
+apps/api/src/generated/
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# local uploads (dev storage driver)
+apps/api/storage/
+!apps/api/storage/.gitkeep
+
+# test output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# misc
+.turbo/
+.cache/

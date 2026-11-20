@@ -1,0 +1,15 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# pnpm 10 blocks lifecycle scripts unless explicitly allowed.
+# These packages need their postinstall step (Prisma engines, native image/crypto builds).
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+  - sharp
+  - argon2
+  - esbuild
+  - '@tailwindcss/oxide'
+  - unrs-resolver
