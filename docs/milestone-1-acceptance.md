@@ -21,6 +21,40 @@ Traceability from the client's Definition of Done to the code and the checks tha
 | Seed data: 1 Super Admin, 1 Moderator, 3–5 members | `apps/api/scripts/seed.ts` | `pnpm db:seed` output; e2e admin login |
 | Staging deployment + credentials + test script | `render.yaml`, `apps/web/vercel.json`, `apps/api/Dockerfile`, `docs/deployment.md`, `docs/client-test-instructions.md` | deploy checklist in `docs/deployment.md` (executed when account tokens are provided) |
 
+## Verification run (Milestone 1 close-out)
+
+Executed on the final commit against Neon PostgreSQL 16 + PostGIS 3.6.4:
+
+| Check | Result |
+| --- | --- |
+| `pnpm typecheck` | ✅ 3 packages, no errors |
+| `pnpm test` | ✅ 28/28 unit tests |
+| `pnpm test:e2e` | ✅ 30/30 API flows against the live database |
+| `pnpm test:web` | ✅ 4/4 Playwright browser flows |
+| `pnpm build` (shared + api + web) | ✅ |
+| `prisma migrate status` | ✅ 3 migrations applied |
+| `SELECT postgis_full_version()` | ✅ PostGIS 3.6.4 |
+| `profiles.locationPoint` | ✅ `geography(Point,4326)` + GiST index |
+| `pnpm db:seed` (run twice) | ✅ idempotent — counts unchanged, 2 admins, 5 sample members, Atlanta + Charlotte |
+| `/api/v1/health` | ✅ `{ status: "ok" }` |
+
+### Blocks closed in this pass
+
+- **Render blueprint could not boot.** `render.yaml` set `NODE_ENV=production` together with
+  `OTP_ALLOW_DEBUG_CODE=true`, which the environment schema rejects at startup. Added an explicit
+  `staging` environment: staging may use the debug OTP, `production` still refuses it at boot.
+  Also added the missing `SAFETY_TIPS_VERSION` to the blueprint.
+- **No request logging.** Added a one-line access log (`METHOD path status duration requestId`) so a
+  client report can be matched to a server-side request id.
+
+### Open blocker: public staging URLs
+
+Frontend and backend deployment could not be completed from this environment because no
+Render/Railway service credentials (and no Twilio credentials) are available here. The exact
+blueprint, Dockerfile, Vercel config and post-deploy checklist are in `docs/deployment.md`; once the
+service and Twilio credentials are supplied the deploy is a mechanical step. Until then the
+client-facing test script in `docs/client-test-instructions.md` runs against the local stack.
+
 ## Verification commands
 
 ```bash

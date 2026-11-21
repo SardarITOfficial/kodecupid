@@ -26,9 +26,9 @@ details, role management, settings and monetization. Compare
 | Check | Command | Status |
 | --- | --- | --- |
 | Static types (3 packages) | `pnpm typecheck` | ✅ |
-| Unit tests: privacy filtering, age gate, permission matrix, onboarding resume | `pnpm test` | ✅ 26 passed |
-| API flows against PostgreSQL + PostGIS | `pnpm test:e2e` | ✅ 18 passed |
-| Browser flows (register → onboarding → profile → admin roles) | `pnpm test:web` | ✅ 3 passed |
+| Unit tests: privacy filtering, age gate, permission matrix, onboarding resume | `pnpm test` | ✅ 28 passed |
+| API flows against PostgreSQL + PostGIS | `pnpm test:e2e` | ✅ 30 passed |
+| Browser flows (register → onboarding → profile → admin roles) | `pnpm test:web` | ✅ 4 passed |
 | Production builds | `pnpm build` | ✅ |
 
 ## Running it right now (local)
@@ -84,4 +84,3 @@ and pause → admin roles with enforced permissions → seed data → handover d
 
 Out of scope (later milestones): matching/discovery, messaging, payments, provider verification review,
 admin 2FA, i18n, native apps, and production document moderation.
-# kodecupid-m1

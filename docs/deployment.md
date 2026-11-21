@@ -27,7 +27,7 @@ fails loudly instead of creating a database without geographic support.
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `NODE_ENV` | yes | `production` on staging/production |
+| `NODE_ENV` | yes | `staging` on the client-test service (allows the debug OTP), `production` for a real launch (debug OTP refused at boot) |
 | `PORT` | no | defaults to `4000` |
 | `API_PREFIX` | no | defaults to `api/v1` |
 | `DATABASE_URL` | yes | PostgreSQL + PostGIS connection string |

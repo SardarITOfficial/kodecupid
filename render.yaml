@@ -14,8 +14,11 @@ services:
     healthCheckPath: /api/v1/health
     autoDeploy: true
     envVars:
+      # Staging: behaves like production for cookies/CORS, but still allows the
+      # debug OTP so the client can test without SMS credits. Switch to
+      # `production` (and set OTP_ALLOW_DEBUG_CODE=false) for a real launch.
       - key: NODE_ENV
-        value: production
+        value: staging
       - key: PORT
         value: 4000
       - key: API_PREFIX
@@ -45,6 +48,8 @@ services:
       - key: TERMS_VERSION
         value: "1.0"
       - key: GUIDELINES_VERSION
+        value: "1.0"
+      - key: SAFETY_TIPS_VERSION
         value: "1.0"
       - key: PRIVACY_VERSION
         value: "1.0"

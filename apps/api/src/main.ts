@@ -25,10 +25,21 @@ async function bootstrap(): Promise<void> {
   );
   app.use(cookieParser());
 
+  const httpLogger = new Logger('HTTP');
   app.use((request: Request, response: Response, next: NextFunction) => {
     const requestId = (request.headers['x-request-id'] as string) ?? randomUUID();
     (request as Request & { id?: string }).id = requestId;
     response.setHeader('x-request-id', requestId);
+
+    // Basic access log: one line per request, with the request id so a client
+    // report can be matched to the server-side error detail.
+    const startedAt = Date.now();
+    response.on('finish', () => {
+      httpLogger.log(
+        `${request.method} ${request.originalUrl} ${response.statusCode} ${Date.now() - startedAt}ms id=${requestId}`,
+      );
+    });
+
     next();
   });
 

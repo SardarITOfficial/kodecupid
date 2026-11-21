@@ -22,7 +22,10 @@ const optionalString = z
 
 const envSchema = z
   .object({
-    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    // `staging` is a real deployment target: it behaves like production for
+    // cookies, but it is explicitly allowed to use the debug OTP so the client
+    // can test registration without SMS credits. Only `production` forbids it.
+    NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(4000),
     API_PREFIX: z.string().default('api/v1'),
     PUBLIC_API_URL: z.string().url().default('http://localhost:4000'),
