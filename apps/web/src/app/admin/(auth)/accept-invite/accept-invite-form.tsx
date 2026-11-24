@@ -7,6 +7,7 @@ import { apiFetch, errorMessage } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { TextInput } from '@/components/ui/field';
 import { Alert } from '@/components/ui/feedback';
+import { AdminAuthFrame } from '@/components/admin/admin-auth-frame';
 
 export function AcceptInviteForm() {
   const searchParams = useSearchParams();
@@ -43,33 +44,30 @@ export function AcceptInviteForm() {
 
   if (done) {
     return (
-      <div className="mx-auto max-w-md px-5 py-12">
-        <div className="rounded-card border border-line bg-white p-6">
-          <h1 className="text-xl font-semibold text-navy">You&apos;re set up</h1>
-          <p className="mt-2 text-sm text-muted">
-            The account <strong className="text-charcoal">{done.email}</strong> is active as{' '}
-            {done.role.replace('_', ' ').toLowerCase()}. Sign in to continue.
-          </p>
-          <Link
-            href="/admin/login"
-            className="mt-5 inline-flex h-11 items-center rounded-full bg-crimson px-5 text-sm font-semibold text-white"
-          >
-            Go to admin sign in
-          </Link>
-        </div>
-      </div>
+      <AdminAuthFrame
+        title="You're set up"
+        subtitle="Your admin account is active. Sign in to continue."
+      >
+        <p className="text-sm leading-relaxed text-charcoal">
+          The account <strong className="text-navy">{done.email}</strong> is active as{' '}
+          {done.role.replace('_', ' ').toLowerCase()}.
+        </p>
+        <Link
+          href="/admin/login"
+          className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-crimson text-base font-semibold text-white transition-colors hover:bg-crimson-dark"
+        >
+          Go to admin sign in
+        </Link>
+      </AdminAuthFrame>
     );
   }
 
   return (
-    <div className="mx-auto max-w-md px-5 py-10">
-      <h1 className="text-2xl font-semibold text-navy">Accept your admin invitation</h1>
-      <p className="mt-2 text-sm text-muted">
-        A Super Admin invited you to KodeCupid administration. Set your name and password to activate
-        the account.
-      </p>
-
-      <form onSubmit={submit} className="mt-6 space-y-4 rounded-card border border-line bg-white p-5">
+    <AdminAuthFrame
+      title="Accept your admin invitation"
+      subtitle="A Super Admin invited you to KodeCupid administration. Set your name and password to activate the account."
+    >
+      <form onSubmit={submit} className="space-y-5">
         {error ? <Alert tone="danger">{error}</Alert> : null}
 
         <TextInput
@@ -105,6 +103,6 @@ export function AcceptInviteForm() {
           Activate account
         </Button>
       </form>
-    </div>
+    </AdminAuthFrame>
   );
 }

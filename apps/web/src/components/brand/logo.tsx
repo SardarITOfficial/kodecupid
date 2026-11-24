@@ -1,7 +1,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-export function Logo({ href = '/', size = 'md' }: { href?: string | null; size?: 'sm' | 'md' }) {
+export function Logo({
+  href = '/',
+  size = 'md',
+  tone = 'dark',
+}: {
+  href?: string | null;
+  size?: 'sm' | 'md';
+  tone?: 'dark' | 'light';
+}) {
   const mark = size === 'sm' ? 'size-8' : 'size-10';
   const text = size === 'sm' ? 'text-lg' : 'text-xl';
   const pixels = size === 'sm' ? 32 : 40;
@@ -15,7 +23,11 @@ export function Logo({ href = '/', size = 'md' }: { href?: string | null; size?:
         height={pixels}
         className={`${mark} rounded-2xl object-cover shadow-sm`}
       />
-      <span className={`${text} font-semibold tracking-tight text-navy`}>
+      <span
+        className={`${text} font-semibold tracking-tight transition-colors ${
+          tone === 'light' ? 'text-white' : 'text-navy'
+        }`}
+      >
         Kode<span className="text-crimson">Cupid</span>
       </span>
     </span>

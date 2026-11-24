@@ -103,6 +103,23 @@ const COUNTRY_OPTIONS = COUNTRY_DIAL_CODES.map((country) => ({
   label: country.name,
 }));
 
+const WELCOME_POINTS = [
+  { title: 'Quick', body: 'Five short steps, saved as you go. Leave and come back anytime.' },
+  { title: 'Private', body: 'Every field gets its own privacy switch.' },
+  { title: 'Flexible', body: 'You can pause your profile whenever you need a break.' },
+];
+
+function StepHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="mb-6">
+      <h1 className="text-2xl font-semibold tracking-tight text-navy sm:text-3xl">{title}</h1>
+      {subtitle ? (
+        <p className="mt-2 text-sm leading-relaxed text-muted sm:text-base">{subtitle}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function OnboardingWizard({ step }: { step: OnboardingStep }) {
   const router = useRouter();
   const { setMember } = useSession();
@@ -293,35 +310,35 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
           }))}
           currentIndex={VISIBLE_STEPS.length - 1}
         />
-        <Card className="mt-6 text-center">
+        <Card className="mt-8 text-center shadow-sm sm:p-8">
           <span aria-hidden className="text-4xl">
             🎉
           </span>
-          <h1 className="mt-3 text-xl font-semibold text-navy">
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-navy sm:text-3xl">
             Almost there, {form.displayName || 'friend'}
           </h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
             One last thing: a profile needs at least one photo. You can add up to six, and change
             them any time from your profile.
           </p>
 
-          <div className="mt-5 text-left">
+          <div className="mt-6 text-left">
             <PhotoManager photos={photos} onChange={setPhotos} />
           </div>
 
-          <dl className="mt-5 grid grid-cols-2 gap-3 text-left text-sm">
-            <div className="rounded-xl bg-alabaster p-3">
+          <dl className="mt-6 grid grid-cols-2 gap-3 text-left text-sm">
+            <div className="rounded-xl bg-alabaster p-3.5 ring-1 ring-line">
               <dt className="text-xs text-muted">City</dt>
               <dd className="font-medium text-navy">{form.city || 'Not set'}</dd>
             </div>
-            <div className="rounded-xl bg-alabaster p-3">
+            <div className="rounded-xl bg-alabaster p-3.5 ring-1 ring-line">
               <dt className="text-xs text-muted">Shift</dt>
               <dd className="font-medium text-navy">
                 {SHIFT_SCHEDULE_LABELS[form.shiftSchedule as keyof typeof SHIFT_SCHEDULE_LABELS] ??
                   'Not set'}
               </dd>
             </div>
-            <div className="rounded-xl bg-alabaster p-3">
+            <div className="rounded-xl bg-alabaster p-3.5 ring-1 ring-line">
               <dt className="text-xs text-muted">Looking for</dt>
               <dd className="font-medium text-navy">
                 {form.lookingFor
@@ -329,7 +346,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
                   .join(', ') || 'Not set'}
               </dd>
             </div>
-            <div className="rounded-xl bg-alabaster p-3">
+            <div className="rounded-xl bg-alabaster p-3.5 ring-1 ring-line">
               <dt className="text-xs text-muted">Hidden fields</dt>
               <dd className="font-medium text-navy">
                 {QUICK_PRIVACY_FIELDS.filter((field) => form.visibility[field] === 'HIDDEN').length} of{' '}
@@ -345,7 +362,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
           ) : null}
 
           <Button
-            className="mt-6"
+            className="mt-8"
             size="lg"
             fullWidth
             loading={finishing}
@@ -369,26 +386,44 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
         currentIndex={Math.max(0, stepIndex)}
       />
 
-      <Card className="mt-6">
+      <Card className="mt-8 shadow-sm sm:p-8">
         {step === 'welcome' ? (
           <div>
-            <h1 className="text-xl font-semibold text-navy">Welcome to KodeCupid</h1>
-            <p className="mt-2 text-sm leading-relaxed text-charcoal">
+            <div className="grid size-14 place-items-center rounded-2xl bg-crimson-soft text-crimson">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="size-7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 20.5s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.8a4.3 4.3 0 0 1 7.5 2.7c0 5.4-7.5 10-7.5 10z" />
+              </svg>
+            </div>
+            <h1 className="mt-5 text-3xl font-semibold tracking-tight text-navy sm:text-4xl">
+              Welcome to <span className="text-crimson">KodeCupid</span>
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-charcoal sm:text-base">
               We built this for people whose lives run on shift patterns — nurses, doctors,
               paramedics, teachers, first responders, engineers and technicians working when the rest
               of the world sleeps.
             </p>
-            <ul className="mt-4 space-y-2 text-sm text-charcoal">
-              {[
-                'Five short steps, saved as you go — leave and come back anytime.',
-                'Every field gets its own privacy switch.',
-                'You can pause your profile whenever you need a break.',
-              ].map((line) => (
-                <li key={line} className="flex gap-2">
-                  <span aria-hidden className="text-crimson">
-                    ✓
-                  </span>
-                  {line}
+            <ul className="mt-7 grid gap-3 sm:grid-cols-3">
+              {WELCOME_POINTS.map((point) => (
+                <li
+                  key={point.title}
+                  className="rounded-2xl bg-alabaster p-4 ring-1 ring-line"
+                >
+                  <p className="flex items-center gap-2 text-sm font-semibold text-navy">
+                    <span aria-hidden className="text-crimson">
+                      ✓
+                    </span>
+                    {point.title}
+                  </p>
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted">{point.body}</p>
                 </li>
               ))}
             </ul>
@@ -396,8 +431,8 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
         ) : null}
 
         {step === 'identity' ? (
-          <div className="space-y-4">
-            <h1 className="text-xl font-semibold text-navy">About you</h1>
+          <div className="space-y-5">
+            <StepHeader title="About you" subtitle="The basics other members will see." />
             <TextInput
               label="Display name"
               required
@@ -447,8 +482,11 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
         ) : null}
 
         {step === 'profession' ? (
-          <div className="space-y-4">
-            <h1 className="text-xl font-semibold text-navy">Work &amp; shifts</h1>
+          <div className="space-y-5">
+            <StepHeader
+              title="Work &amp; shifts"
+              subtitle="This is how we match you with people on a compatible schedule."
+            />
             <SelectableChips
               legend="Profession category"
               options={optionsFrom(PROFESSION_CATEGORY_LABELS)}
@@ -493,8 +531,8 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
         ) : null}
 
         {step === 'location' ? (
-          <div className="space-y-4">
-            <h1 className="text-xl font-semibold text-navy">Where are you based?</h1>
+          <div className="space-y-5">
+            <StepHeader title="Where are you based?" subtitle="Only your city is shown to members." />
             <TextInput
               label="City"
               required
@@ -515,23 +553,23 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
               onChange={(event) => update('country', event.target.value)}
               options={COUNTRY_OPTIONS}
             />
-            <div className="rounded-xl border border-line bg-alabaster p-3">
-              <p className="text-sm font-medium text-navy">Approximate location</p>
-              <p className="mt-1 text-xs text-muted">
+            <div className="rounded-2xl border border-line bg-alabaster p-4">
+              <p className="text-sm font-semibold text-navy">Approximate location</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
                 Optional. Used for distance-based matching in a later release; exact coordinates are
                 never shown to members.
               </p>
-              <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={useMyLocation}>
+              <Button type="button" variant="ghost" size="sm" className="mt-3" onClick={useMyLocation}>
                 Use my current location
               </Button>
-              {geoNote ? <p className="mt-1 text-xs text-muted">{geoNote}</p> : null}
+              {geoNote ? <p className="mt-2 text-xs text-muted">{geoNote}</p> : null}
             </div>
           </div>
         ) : null}
 
         {step === 'preferences' ? (
-          <div className="space-y-4">
-            <h1 className="text-xl font-semibold text-navy">What are you looking for?</h1>
+          <div className="space-y-5">
+            <StepHeader title="What are you looking for?" subtitle="You can change this any time." />
             <SelectableChips
               legend="I'm open to"
               multiple
@@ -542,7 +580,7 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
             {fieldErrors.lookingFor ? (
               <p className="text-xs font-medium text-crimson">{fieldErrors.lookingFor}</p>
             ) : null}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <TextInput
                 label="Youngest age"
                 type="number"
@@ -575,12 +613,11 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
 
         {step === 'privacy' ? (
           <div>
-            <h1 className="text-xl font-semibold text-navy">Quick privacy check</h1>
-            <p className="mt-2 text-sm text-muted">
-              Four fields people are most protective of. You can change all twenty from your profile
-              later.
-            </p>
-            <div className="mt-3 divide-y divide-line">
+            <StepHeader
+              title="Quick privacy check"
+              subtitle="Four fields people are most protective of. You can change all twenty from your profile later."
+            />
+            <div className="divide-y divide-line rounded-2xl border border-line bg-white px-4">
               {QUICK_PRIVACY_FIELDS.map((field) => {
                 const level = form.visibility[field] ?? 'PUBLIC';
                 return (
@@ -615,24 +652,30 @@ export function OnboardingWizard({ step }: { step: OnboardingStep }) {
         ) : null}
 
         {error ? (
-          <div className="mt-4">
+          <div className="mt-5">
             <Alert tone="danger">{error}</Alert>
           </div>
         ) : null}
 
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              if (stepIndex > 0) router.push(`/onboarding/${ORDER[stepIndex - 1] ?? 'welcome'}`);
-            }}
-            disabled={stepIndex <= 0 || saving}
-          >
-            Back
-          </Button>
+        <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-6">
+          {stepIndex > 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => router.push(`/onboarding/${ORDER[stepIndex - 1] ?? 'welcome'}`)}
+              disabled={saving}
+            >
+              Back
+            </Button>
+          ) : (
+            <span />
+          )}
           <Button type="button" onClick={() => void saveAndContinue()} loading={saving} size="lg">
-            {step === 'privacy' ? 'Continue to finish' : 'Continue'}
+            {step === 'welcome'
+              ? 'Get started'
+              : step === 'privacy'
+                ? 'Continue to finish'
+                : 'Continue'}
           </Button>
         </div>
       </Card>

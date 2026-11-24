@@ -58,7 +58,7 @@ export function AdminSectionShell({ endpoint }: { endpoint: string }) {
 
   if (denied) {
     return (
-      <Card>
+      <Card className="p-6 sm:p-8">
         <h1 className="text-xl font-semibold text-navy">Not available for your role</h1>
         <p className="mt-2 text-sm text-muted">
           Your admin role does not include this section. Ask a Super Admin if you need access.
@@ -72,12 +72,15 @@ export function AdminSectionShell({ endpoint }: { endpoint: string }) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-navy">{data.title}</h1>
+    <div className="space-y-6">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-crimson">Admin</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-navy">{data.title}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-muted">{data.description}</p>
+        </div>
         {data.milestone === 2 ? <Badge tone="gold">Milestone 2</Badge> : <Badge tone="success">Live</Badge>}
-      </div>
-      <p className="text-sm text-muted">{data.description}</p>
+      </header>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
@@ -92,18 +95,21 @@ export function AdminSectionShell({ endpoint }: { endpoint: string }) {
           icon="◎"
         />
       ) : (
-        <Card>
+        <Card className="p-2 sm:p-3">
           <ul className="divide-y divide-line text-sm">
             {data.items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
-                <div>
-                  <p className="font-medium text-charcoal">{item.action ?? item.id}</p>
-                  <p className="text-xs text-muted">
+              <li
+                key={item.id}
+                className="flex flex-col gap-1 rounded-xl px-3 py-3 transition-colors hover:bg-alabaster sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-navy">{item.action ?? item.id}</p>
+                  <p className="truncate text-xs text-muted">
                     {[item.targetType, item.targetId].filter(Boolean).join(' · ') || '—'}
                   </p>
                 </div>
-                <div className="text-right text-xs text-muted">
-                  <p>{item.admin ?? 'system'}</p>
+                <div className="shrink-0 text-xs text-muted sm:text-right">
+                  <p className="font-medium text-charcoal">{item.admin ?? 'system'}</p>
                   <p>{item.createdAt ? new Date(item.createdAt).toLocaleString() : ''}</p>
                 </div>
               </li>

@@ -7,11 +7,7 @@ export const metadata: Metadata = { title: 'Admin sign in' };
 export default function AdminLoginPage() {
   return (
     <Suspense
-      fallback={
-        <div className="grid min-h-dvh place-items-center bg-navy text-sm text-white/70">
-          Loading admin sign in…
-        </div>
-      }
+      fallback={<div className="py-10 text-center text-sm text-muted">Loading admin sign in…</div>}
     >
       <AdminLoginForm />
     </Suspense>

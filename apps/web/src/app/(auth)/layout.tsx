@@ -1,17 +1,14 @@
-import { Logo } from '@/components/brand/logo';
+import { SiteHeader } from '@/components/layout/site-header';
+import { SiteFooter } from '@/components/layout/site-footer';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-alabaster">
-      <header className="mx-auto w-full max-w-md px-5 py-6">
-        <Logo />
-      </header>
-      <main id="main" className="mx-auto w-full max-w-md flex-1 px-5 pb-10">
+      <SiteHeader />
+      <main id="main" className="flex-1">
         {children}
       </main>
-      <footer className="mx-auto w-full max-w-md px-5 pb-8 text-xs text-muted">
-        <p>KodeCupid is for adults 18 and over. Your number is only used to verify your account.</p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

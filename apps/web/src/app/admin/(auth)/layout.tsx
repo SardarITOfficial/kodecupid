@@ -1,0 +1,14 @@
+import { SiteHeader } from '@/components/layout/site-header';
+import { SiteFooter } from '@/components/layout/site-footer';
+
+export default function AdminAuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-dvh flex-col bg-alabaster">
+      <SiteHeader />
+      <main id="main" className="flex-1 px-4 py-10 sm:py-16">
+        {children}
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}

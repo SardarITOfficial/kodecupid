@@ -1,15 +1,14 @@
-import { Logo } from '@/components/brand/logo';
+import { SiteHeader } from '@/components/layout/site-header';
+import { SiteFooter } from '@/components/layout/site-footer';
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-alabaster">
-      <header className="mx-auto flex w-full max-w-md items-center justify-between px-5 py-5">
-        <Logo />
-        <span className="text-xs font-medium uppercase tracking-wider text-muted">Setup</span>
-      </header>
-      <main id="main" className="mx-auto w-full max-w-md px-5 pb-12">
+    <div className="flex min-h-dvh flex-col bg-alabaster">
+      <SiteHeader />
+      <main id="main" className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6 sm:py-14">
         {children}
       </main>
+      <SiteFooter />
     </div>
   );
 }
