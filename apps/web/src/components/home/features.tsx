@@ -40,7 +40,7 @@ function QuoteMark({ className = '' }: { className?: string }) {
 export function Features() {
   return (
     <section className="bg-alabaster">
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:py-24">
+      <div className="mx-auto container px-4 py-16 sm:px-6 lg:py-24">
         {/* Desktop: collage layout */}
         <div className="relative hidden aspect-[1290/711] w-full lg:block">
           <div className="absolute left-0 top-0 w-[30%]">

@@ -12,7 +12,7 @@ export function Hero() {
       />
 
       {/* Title, bottom-left */}
-      <div className="mx-auto flex w-full max-w-350 flex-1 flex-col items-start justify-end px-4 pb-6 pt-16 text-left sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full container lg:px-8 flex-1 flex-col items-start justify-end px-4 pb-6 pt-16 text-left sm:px-6 ">
         <h1 className="relative max-w-5xl font-(family-name:--font-fraunces) text-3xl font-medium leading-[1.02] tracking-tight text-white sm:text-7xl lg:text-8xl xl:text-[6.5rem]">
           It starts with a shift.
           {/* <span className="absolute -right-2 top-0 font-(family-name:--font-fraunces) text-xs font-bold tracking-normal sm:-right-6 sm:text-sm lg:-right-8">
