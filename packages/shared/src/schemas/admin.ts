@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ADMIN_ROLE_VALUES, ADMIN_STATUS_VALUES, USER_STATUS_VALUES } from '../enums';
+import { PERMISSIONS } from '../permissions';
 import { emailSchema, passwordSchema } from './common';
 
 export const adminLoginSchema = z.object({
@@ -55,3 +56,9 @@ export const roleUpdateSchema = z.object({
 });
 
 export type RoleUpdateInput = z.infer<typeof roleUpdateSchema>;
+
+export const updateRolePermissionsSchema = z.object({
+  permissions: z.array(z.enum(PERMISSIONS)).max(PERMISSIONS.length),
+});
+
+export type UpdateRolePermissionsInput = z.infer<typeof updateRolePermissionsSchema>;

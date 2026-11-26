@@ -53,6 +53,16 @@ export function permissionsFor(role: AdminRole): readonly Permission[] {
   return ROLE_PERMISSIONS[role];
 }
 
+/**
+ * Permissions that can never be granted to a non-Super-Admin role.
+ * admins.manage would allow self-promotion; users.delete is also enforced by
+ * role inside the API.
+ */
+export const SUPER_ADMIN_ONLY_PERMISSIONS: readonly Permission[] = [
+  'admins.manage',
+  'users.delete',
+];
+
 export interface AdminNavItem {
   key: string;
   label: string;
@@ -70,6 +80,14 @@ export const ADMIN_NAV: AdminNavItem[] = [
     href: '/admin/users',
     permission: 'users.read',
     description: 'Search every member, review profiles and privacy settings',
+    milestone: 1,
+  },
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    href: '/admin/dashboard',
+    permission: 'users.read',
+    description: 'Member counts and moderation queues at a glance',
     milestone: 1,
   },
   {

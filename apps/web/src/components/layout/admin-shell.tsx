@@ -70,153 +70,163 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const currentTitle = items.find((item) => isActive(item.href))?.label ?? 'Dashboard';
+
+  /* Shared by the desktop sidebar and the mobile drawer. */
+  const sidebarContent = (
+    <>
+      <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-5">
+        <Logo href="/admin/users" size="sm" tone="light" />
+        <span className="rounded-full bg-crimson px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white">
+          Admin
+        </span>
+      </div>
+
+      <nav aria-label="Admin sections" className="flex-1 overflow-y-auto px-3 py-4">
+        <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
+          Sections
+        </p>
+        <ul className="space-y-1">
+          {items.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <li key={item.key}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? 'bg-crimson text-white'
+                      : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="truncate">{item.label}</span>
+                  {item.milestone === 2 ? (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        active ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'
+                      }`}
+                    >
+                      M2
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="shrink-0 space-y-3 border-t border-white/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <Link
+          href="/"
+          className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <span>Member site</span>
+          <span aria-hidden>↗</span>
+        </Link>
+        <div className="rounded-xl bg-white/5 p-3">
+          <p className="truncate text-xs text-white/70">{admin.admin.email}</p>
+          <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-gold">
+            {ADMIN_ROLE_LABELS[role]}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="flex h-10 w-full items-center justify-center rounded-full border border-white/25 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+        >
+          Sign out
+        </button>
+      </div>
+    </>
+  );
 
   return (
-    <div className="flex min-h-dvh flex-col bg-alabaster">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-navy text-white shadow-sm">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setOpen((value) => !value)}
-              aria-label={open ? 'Close menu' : 'Open menu'}
-              aria-expanded={open}
-              aria-controls="admin-mobile-menu"
-              className="grid size-10 place-items-center rounded-full text-white hover:bg-white/10 lg:hidden"
-            >
-              <svg
-                aria-hidden
-                viewBox="0 0 24 24"
-                className="size-6"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-              </svg>
-            </button>
-            <Logo href="/admin/users" size="sm" tone="light" />
-            <span className="rounded-full bg-crimson px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider">
-              Admin
-            </span>
-          </div>
+    <div className="flex h-dvh overflow-hidden bg-alabaster">
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 flex-col bg-navy text-white lg:flex">
+        {sidebarContent}
+      </aside>
 
-          <div className="flex items-center gap-3">
-            <span className="hidden max-w-56 truncate text-sm text-white/70 md:inline">
-              {admin.admin.email}
-            </span>
-            <Badge tone="gold">{ADMIN_ROLE_LABELS[role]}</Badge>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="hidden h-9 items-center rounded-full border border-white/25 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/10 sm:inline-flex"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile menu: full width under the header */}
+      {/* Mobile drawer */}
       {open ? (
-        <div
-          id="admin-mobile-menu"
-          className="fixed inset-x-0 bottom-0 top-16 z-30 flex flex-col overflow-y-auto bg-white lg:hidden"
-        >
-          <nav aria-label="Admin sections" className="flex-1 px-4 pt-2">
-            {items.map((item) => (
-              <Link
-                key={item.key}
-                href={item.href}
-                aria-current={isActive(item.href) ? 'page' : undefined}
-                className={`flex items-center justify-between border-b border-line py-4 text-lg font-medium ${
-                  isActive(item.href) ? 'text-crimson' : 'text-navy'
-                }`}
-              >
-                <span>{item.label}</span>
-                {item.milestone === 2 ? (
-                  <span className="rounded-full bg-alabaster px-2 py-0.5 text-[10px] font-semibold uppercase text-muted">
-                    M2
-                  </span>
-                ) : null}
-              </Link>
-            ))}
-          </nav>
-          <div className="space-y-3 border-t border-line bg-alabaster p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <p className="truncate text-center text-xs text-muted">{admin.admin.email}</p>
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="flex h-12 w-full items-center justify-center rounded-full bg-crimson text-base font-semibold text-white hover:bg-crimson-dark"
-            >
-              Sign out
-            </button>
-          </div>
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-navy/60"
+          />
+          <aside
+            id="admin-mobile-menu"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-navy text-white shadow-xl"
+          >
+            {sidebarContent}
+          </aside>
         </div>
       ) : null}
 
-      {/* Body */}
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-6 sm:px-6 lg:flex-row lg:px-8 lg:py-10">
-        <aside className="hidden lg:block lg:w-64 lg:shrink-0">
-          <nav
-            aria-label="Admin sections"
-            className="sticky top-24 rounded-2xl border border-line bg-white p-3 shadow-sm"
-          >
-            <p className="px-3 pb-2 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
-              Sections
-            </p>
-            <ul className="space-y-1">
-              {items.map((item) => {
-                const active = isActive(item.href);
-                return (
-                  <li key={item.key}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                        active ? 'bg-navy text-white' : 'text-charcoal hover:bg-alabaster'
-                      }`}
-                    >
-                      <span className="truncate">{item.label}</span>
-                      {item.milestone === 2 ? (
-                        <span
-                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
-                            active ? 'bg-white/15 text-white' : 'bg-alabaster text-muted'
-                          }`}
-                        >
-                          M2
-                        </span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </aside>
+      {/* Right side: header + scrolling content + footer */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="z-30 shrink-0 border-b border-line bg-white">
+          <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setOpen((value) => !value)}
+                aria-label={open ? 'Close menu' : 'Open menu'}
+                aria-expanded={open}
+                aria-controls="admin-mobile-menu"
+                className="grid size-10 shrink-0 place-items-center rounded-full text-navy hover:bg-alabaster lg:hidden"
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="size-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  {open ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+                </svg>
+              </button>
+              <h2 className="truncate text-base font-semibold text-navy sm:text-lg">
+                {currentTitle}
+              </h2>
+            </div>
 
-        <main id="main" className="min-w-0 flex-1">
-          {children}
-        </main>
-      </div>
-
-      {/* Footer */}
-      <footer className="border-t border-line bg-white">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-5 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p>© {new Date().getFullYear()} KodeCupid · Admin console</p>
-          <div className="flex items-center gap-5">
-            <Link href="/" className="hover:text-navy">
-              Member site
-            </Link>
-            <Link href="/admin/audit" className="hover:text-navy">
-              Activity log
-            </Link>
-            <span>Staff use only</span>
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="hidden max-w-56 truncate text-sm text-muted md:inline">
+                {admin.admin.email}
+              </span>
+              <Badge tone="gold">{ADMIN_ROLE_LABELS[role]}</Badge>
+            </div>
           </div>
+        </header>
+
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <main
+            id="main"
+            className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+          >
+            {children}
+          </main>
+
+          <footer className="shrink-0 border-t border-line bg-white">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-4 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+              <p>© {new Date().getFullYear()} KodeCupid · Admin console</p>
+              <div className="flex items-center gap-5">
+                <Link href="/admin/audit" className="hover:text-navy">
+                  Activity log
+                </Link>
+                <span>Staff use only</span>
+              </div>
+            </div>
+          </footer>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

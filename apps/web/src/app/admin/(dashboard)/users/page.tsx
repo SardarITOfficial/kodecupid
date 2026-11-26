@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   PROFILE_STATUS_VALUES,
@@ -26,43 +26,116 @@ function statusTone(status: AdminMemberRow['status']) {
   return 'neutral' as const;
 }
 
+function initialsOf(name: string | null): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+  return (first + last).toUpperCase() || '?';
+}
+
+function locationOf(member: AdminMemberRow): string {
+  return [member.age ? `${member.age}` : null, member.city].filter(Boolean).join(' · ');
+}
+
+function MemberAvatar({ name }: { name: string | null }) {
+  return (
+    <span
+      aria-hidden
+      className="grid size-10 shrink-0 place-items-center rounded-full bg-navy text-xs font-semibold tracking-wide text-white"
+    >
+      {initialsOf(name)}
+    </span>
+  );
+}
+
+function OnboardingLine({ done }: { done: boolean }) {
+  return (
+    <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs text-muted">
+      <span
+        aria-hidden
+        className={`size-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-gold'}`}
+      />
+      {done ? 'Onboarded' : 'Setup incomplete'}
+    </span>
+  );
+}
+
+/** Page numbers with ellipses, e.g. 1 … 4 5 6 … 12 */
+function pageWindow(current: number, total: number): (number | 'gap-left' | 'gap-right')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1);
+  const pages: (number | 'gap-left' | 'gap-right')[] = [1];
+  const start = Math.max(2, current - 1);
+  const end = Math.min(total - 1, current + 1);
+  if (start > 2) pages.push('gap-left');
+  for (let value = start; value <= end; value += 1) pages.push(value);
+  if (end < total - 1) pages.push('gap-right');
+  pages.push(total);
+  return pages;
+}
+
 export default function AdminUsersPage() {
   const { admin } = useSession();
   const [data, setData] = useState<Paginated<AdminMemberRow> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // What the admin is typing (not applied until Search / Enter).
+  const [draft, setDraft] = useState('');
+  // What is actually applied to the list.
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [profileStatus, setProfileStatus] = useState('');
   const [page, setPage] = useState(1);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(PAGE_SIZE),
-        ...(q ? { q } : {}),
-        ...(status ? { status } : {}),
-        ...(profileStatus ? { profileStatus } : {}),
-      });
-      const result = await apiFetch<Paginated<AdminMemberRow>>(`/admin/users?${params.toString()}`, {
-        auth: 'admin',
-      });
-      setData(result);
-    } catch (caught) {
-      setError(errorMessage(caught, 'Could not load members.'));
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load(): Promise<void> {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(PAGE_SIZE),
+          ...(q ? { q } : {}),
+          ...(status ? { status } : {}),
+          ...(profileStatus ? { profileStatus } : {}),
+        });
+        const result = await apiFetch<Paginated<AdminMemberRow>>(
+          `/admin/users?${params.toString()}`,
+          { auth: 'admin' },
+        );
+        if (!cancelled) setData(result);
+      } catch (caught) {
+        if (!cancelled) setError(errorMessage(caught, 'Could not load members.'));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [page, q, status, profileStatus]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
+  const hasFilters = Boolean(q || status || profileStatus || draft);
 
-  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  function applySearch(): void {
+    setQ(draft.trim());
+    setPage(1);
+  }
+
+  function clearAll(): void {
+    setDraft('');
+    setQ('');
+    setStatus('');
+    setProfileStatus('');
+    setPage(1);
+  }
 
   return (
     <div className="space-y-4">
@@ -75,20 +148,21 @@ export default function AdminUsersPage() {
         </p>
       </div>
 
-      <Card>
+      {/* Search + filters */}
+      <Card className="p-4">
         <form
-          className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
+          role="search"
+          className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px_200px_auto]"
           onSubmit={(event) => {
             event.preventDefault();
-            setPage(1);
-            void load();
+            applySearch();
           }}
         >
           <TextInput
             aria-label="Search members"
             placeholder="Search by phone or display name"
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
           />
           <SelectField
             aria-label="Account status"
@@ -113,10 +187,26 @@ export default function AdminUsersPage() {
             placeholder="Any profile"
             options={PROFILE_STATUS_VALUES.map((value) => ({ value, label: value }))}
           />
-          <Button type="submit" variant="secondary">
-            Search
-          </Button>
+          <div className="flex gap-2">
+            <Button type="submit" variant="secondary" className="flex-1 md:flex-none">
+              Search
+            </Button>
+            {hasFilters ? (
+              <Button type="button" variant="ghost" onClick={clearAll}>
+                Clear
+              </Button>
+            ) : null}
+          </div>
         </form>
+
+        {q || status || profileStatus ? (
+          <p className="mt-3 text-xs text-muted">
+            Showing results
+            {q ? <> for “{q}”</> : null}
+            {status ? <> · {USER_STATUS_LABELS[status as keyof typeof USER_STATUS_LABELS]}</> : null}
+            {profileStatus ? <> · {profileStatus}</> : null}
+          </p>
+        ) : null}
       </Card>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
@@ -131,103 +221,155 @@ export default function AdminUsersPage() {
       ) : null}
 
       {data && data.items.length > 0 ? (
-        <>
-          <div className="hidden overflow-hidden rounded-card border border-line bg-white sm:block">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-alabaster text-xs uppercase tracking-wide text-muted">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Member
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Phone
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Age
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    City
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Account
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Profile
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    Joined
-                  </th>
-                  <th scope="col" className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {data.items.map((member) => (
-                  <tr key={member.id} className="hover:bg-alabaster/60">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-navy">{member.displayName ?? '—'}</p>
-                      <p className="text-xs text-muted">
-                        {member.onboardingCompletedAt ? 'Onboarded' : 'Setup incomplete'}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs text-charcoal">{member.phone}</td>
-                    <td className="px-4 py-3 text-charcoal">{member.age ?? '—'}</td>
-                    <td className="px-4 py-3 text-charcoal">{member.city ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <Badge tone={statusTone(member.status)}>
-                        {USER_STATUS_LABELS[member.status]}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={member.profileStatus === 'PAUSED' ? 'warning' : 'neutral'}>
-                        {member.profileStatus ?? 'No profile'}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted">{formatDate(member.createdAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/users/${member.id}`}
-                        className="text-sm font-semibold text-crimson hover:underline"
-                      >
-                        View
-                      </Link>
-                    </td>
+        <div
+          className={`space-y-4 transition-opacity ${loading ? 'opacity-60' : 'opacity-100'}`}
+          aria-busy={loading}
+        >
+          {/* Desktop / tablet table */}
+          <div className="hidden overflow-hidden rounded-card border border-line bg-white shadow-sm md:block">
+            <div className="flex items-center justify-between border-b border-line px-5 py-3">
+              <p className="text-sm font-semibold text-navy">All members</p>
+              <p className="text-xs text-muted">
+                {data.total} {data.total === 1 ? 'member' : 'members'}
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-205 text-left text-sm">
+                <thead className="bg-alabaster text-[11px] uppercase tracking-wider text-muted">
+                  <tr>
+                    <th scope="col" className="px-5 py-3 font-semibold">
+                      Member
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Phone
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Location
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Account
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Profile
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Joined
+                    </th>
+                    <th scope="col" className="px-5 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {data.items.map((member) => {
+                    const location = locationOf(member);
+                    return (
+                      <tr key={member.id} className="transition-colors hover:bg-alabaster/70">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-3">
+                            <MemberAvatar name={member.displayName} />
+                            <div className="min-w-0">
+                              <p className="truncate font-medium text-navy">
+                                {member.displayName ?? 'Unnamed member'}
+                              </p>
+                              <OnboardingLine done={Boolean(member.onboardingCompletedAt)} />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 font-mono text-xs text-charcoal">
+                          {member.phone}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 text-charcoal">
+                          {location || <span className="text-muted">—</span>}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <Badge tone={statusTone(member.status)}>
+                            {USER_STATUS_LABELS[member.status]}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <Badge tone={member.profileStatus === 'PAUSED' ? 'warning' : 'neutral'}>
+                            {member.profileStatus ?? 'No profile'}
+                          </Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3.5 text-xs text-muted">
+                          {formatDate(member.createdAt)}
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <Link
+                            href={`/admin/users/${member.id}`}
+                            aria-label={`View ${member.displayName ?? 'member'}`}
+                            className="inline-flex h-8 items-center rounded-full border border-line px-4 text-xs font-semibold text-navy transition-colors hover:border-crimson hover:text-crimson"
+                          >
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <ul className="space-y-2 sm:hidden">
-            {data.items.map((member) => (
-              <li key={member.id}>
-                <Link href={`/admin/users/${member.id}`} className="block">
-                  <Card className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-navy">
-                          {member.displayName ?? 'Unnamed member'}
-                        </p>
-                        <p className="mt-0.5 font-mono text-xs text-muted">{member.phone}</p>
-                        <p className="mt-1 text-xs text-muted">
-                          {[member.age ? `${member.age}` : null, member.city]
-                            .filter(Boolean)
-                            .join(' · ') || 'No location'}
-                        </p>
+          {/* Mobile cards */}
+          <ul className="space-y-3 md:hidden">
+            {data.items.map((member) => {
+              const location = locationOf(member);
+              return (
+                <li key={member.id}>
+                  <Link href={`/admin/users/${member.id}`} className="block">
+                    <Card className="p-4">
+                      <div className="flex items-start gap-3">
+                        <MemberAvatar name={member.displayName} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="truncate font-medium text-navy">
+                              {member.displayName ?? 'Unnamed member'}
+                            </p>
+                            <Badge tone={statusTone(member.status)}>
+                              {USER_STATUS_LABELS[member.status]}
+                            </Badge>
+                          </div>
+                          <p className="mt-0.5 font-mono text-xs text-muted">{member.phone}</p>
+                          <p className="mt-1 text-xs text-muted">{location || 'No location'}</p>
+                          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
+                            <Badge tone={member.profileStatus === 'PAUSED' ? 'warning' : 'neutral'}>
+                              {member.profileStatus ?? 'No profile'}
+                            </Badge>
+                            <span className="text-xs text-muted">
+                              Joined {formatDate(member.createdAt)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <Badge tone={statusTone(member.status)}>{USER_STATUS_LABELS[member.status]}</Badge>
-                    </div>
-                  </Card>
-                </Link>
-              </li>
-            ))}
+                    </Card>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
-          <div className="flex items-center justify-between gap-3">
+          {/* Pagination */}
+          <nav
+            aria-label="Members pagination"
+            className="flex flex-col items-center gap-3 rounded-card border border-line bg-white px-4 py-3 shadow-sm sm:flex-row sm:justify-between"
+          >
             <p className="text-xs text-muted">
-              {(data.page - 1) * data.pageSize + 1}–
+              Showing {(data.page - 1) * data.pageSize + 1}–
               {Math.min(data.page * data.pageSize, data.total)} of {data.total} members
             </p>
-            <div className="flex gap-2">
+
+            <div className="flex flex-wrap items-center justify-center gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={page <= 1 || loading}
+                onClick={() => setPage(1)}
+                aria-label="First page"
+              >
+                «
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
@@ -236,6 +378,36 @@ export default function AdminUsersPage() {
               >
                 Previous
               </Button>
+
+              <div className="hidden items-center gap-1 sm:flex">
+                {pageWindow(page, totalPages).map((entry) =>
+                  typeof entry === 'number' ? (
+                    <button
+                      key={entry}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => setPage(entry)}
+                      aria-label={`Page ${entry}`}
+                      aria-current={entry === page ? 'page' : undefined}
+                      className={`grid h-8 min-w-8 place-items-center rounded-full px-2 text-xs font-semibold transition-colors ${
+                        entry === page
+                          ? 'bg-navy text-white'
+                          : 'text-charcoal hover:bg-alabaster'
+                      }`}
+                    >
+                      {entry}
+                    </button>
+                  ) : (
+                    <span key={entry} aria-hidden className="px-1 text-xs text-muted">
+                      …
+                    </span>
+                  ),
+                )}
+              </div>
+              <span className="px-2 text-xs text-muted sm:hidden">
+                Page {page} of {totalPages}
+              </span>
+
               <Button
                 size="sm"
                 variant="ghost"
@@ -244,9 +416,18 @@ export default function AdminUsersPage() {
               >
                 Next
               </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={page >= totalPages || loading}
+                onClick={() => setPage(totalPages)}
+                aria-label="Last page"
+              >
+                »
+              </Button>
             </div>
-          </div>
-        </>
+          </nav>
+        </div>
       ) : null}
     </div>
   );

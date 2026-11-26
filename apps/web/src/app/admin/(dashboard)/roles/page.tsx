@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ADMIN_ROLE_LABELS,
   ADMIN_ROLE_VALUES,
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, Badge, LoadingBlock } from '@/components/ui/feedback';
 import { SelectField, TextInput } from '@/components/ui/field';
+import { RolePermissions } from '@/components/admin/role-permissions';
 
 const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ACTIVE: 'success',
@@ -24,12 +25,51 @@ const STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'neutral'> 
   ACCEPTED: 'success',
 };
 
+const ROLE_OPTIONS = ADMIN_ROLE_VALUES.map((role) => ({
+  value: role,
+  label: ADMIN_ROLE_LABELS[role],
+}));
+
+function initialsOf(value: string): string {
+  const base = value.includes('@') ? (value.split('@')[0] ?? value) : value;
+  const parts = base.trim().split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : '';
+  return (first + last).toUpperCase() || '?';
+}
+
+function PersonAvatar({ label, pending }: { label: string; pending: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`grid size-10 shrink-0 place-items-center rounded-full text-xs font-semibold tracking-wide ${
+        pending ? 'border border-dashed border-line bg-alabaster text-muted' : 'bg-navy text-white'
+      }`}
+    >
+      {initialsOf(label)}
+    </span>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h2 className="text-sm font-semibold uppercase tracking-wide text-navy">{children}</h2>;
+}
+
+function activityLine(assignment: RoleAssignmentRow): string {
+  if (assignment.lastLoginAt) return `Last sign-in ${formatDateTime(assignment.lastLoginAt)}`;
+  if (assignment.expiresAt) return `Expires ${formatDateTime(assignment.expiresAt)}`;
+  return 'Never signed in';
+}
+
 export default function RolesPage() {
   const [assignments, setAssignments] = useState<RoleAssignmentRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<AdminRole>('MODERATOR');
@@ -79,6 +119,7 @@ export default function RolesPage() {
     setBusy(true);
     setError(null);
     setInviteResult(null);
+    setCopied(false);
     try {
       const result = await apiFetch<RoleAssignmentResult>('/admin/roles/assign', {
         method: 'POST',
@@ -134,6 +175,33 @@ export default function RolesPage() {
     }
   }
 
+  const inviteLink = inviteResult
+    ? inviteResult.inviteUrl
+      ? `${window.location.origin}${inviteResult.inviteUrl}`
+      : `${window.location.origin}/admin/accept-invite?token=${inviteResult.inviteToken ?? ''}`
+    : '';
+
+  async function copyLink(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  const visible = useMemo(() => {
+    const needle = filter.trim().toLowerCase();
+    if (!assignments) return [];
+    if (!needle) return assignments;
+    return assignments.filter(
+      (assignment) =>
+        assignment.email.toLowerCase().includes(needle) ||
+        (assignment.name ?? '').toLowerCase().includes(needle),
+    );
+  }, [assignments, filter]);
+
   if (loading && !assignments) {
     return <LoadingBlock label="Loading the admin team" rows={4} />;
   }
@@ -148,6 +216,44 @@ export default function RolesPage() {
         </p>
       </Card>
     );
+  }
+
+  function roleSelect(assignment: RoleAssignmentRow, className: string) {
+    return (
+      <SelectField
+        aria-label={`Role for ${assignment.email}`}
+        value={assignment.role}
+        onChange={(event) =>
+          void changeRole(assignment.assignmentId, event.target.value as AdminRole)
+        }
+        options={ROLE_OPTIONS}
+        disabled={busy}
+        className={className}
+      />
+    );
+  }
+
+  function rowActions(assignment: RoleAssignmentRow) {
+    if (assignment.status === 'DISABLED' && assignment.source === 'ADMIN') {
+      return (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => void restore(assignment.assignmentId)}
+        >
+          Restore
+        </Button>
+      );
+    }
+    if (assignment.status === 'PENDING' || assignment.status === 'ACTIVE') {
+      return (
+        <Button size="sm" variant="danger" disabled={busy} onClick={() => void revoke(assignment)}>
+          Revoke
+        </Button>
+      );
+    }
+    return null;
   }
 
   return (
@@ -176,21 +282,29 @@ export default function RolesPage() {
                 Email delivery is not wired up in Milestone 1. Send this one-time link to the person
                 directly:
               </p>
-              <code className="block break-all rounded-lg bg-white px-3 py-2 text-xs text-charcoal">
-                {inviteResult.inviteUrl
-                  ? `${window.location.origin}${inviteResult.inviteUrl}`
-                  : `${window.location.origin}/admin/accept-invite?token=${inviteResult.inviteToken ?? ''}`}
-              </code>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <code className="block min-w-0 flex-1 break-all rounded-lg bg-white px-3 py-2 text-xs text-charcoal">
+                  {inviteLink}
+                </code>
+                <Button type="button" size="sm" variant="secondary" onClick={() => void copyLink()}>
+                  {copied ? 'Copied' : 'Copy link'}
+                </Button>
+              </div>
             </>
           )}
         </Alert>
       ) : null}
 
-      <Card>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-navy">
-          Assign a role by email
-        </h2>
-        <form className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto]" onSubmit={assign}>
+      {/* Assign */}
+      <Card className="p-5">
+        <SectionTitle>Assign a role by email</SectionTitle>
+        <p className="mt-0.5 text-xs text-muted">
+          Use an existing admin&apos;s email to change their role, or a new email to invite them.
+        </p>
+        <form
+          className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_200px_auto]"
+          onSubmit={assign}
+        >
           <TextInput
             aria-label="Email address"
             type="email"
@@ -203,7 +317,7 @@ export default function RolesPage() {
             aria-label="Role"
             value={inviteRole}
             onChange={(event) => setInviteRole(event.target.value as AdminRole)}
-            options={ADMIN_ROLE_VALUES.map((role) => ({ value: role, label: ADMIN_ROLE_LABELS[role] }))}
+            options={ROLE_OPTIONS}
           />
           <Button type="submit" loading={busy}>
             Assign role
@@ -211,71 +325,131 @@ export default function RolesPage() {
         </form>
       </Card>
 
-      <Card>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-navy">
-          People with access
-        </h2>
+      {/* People */}
+      <div className="overflow-hidden rounded-card border border-line bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <SectionTitle>People with access</SectionTitle>
+            <p className="mt-0.5 text-xs text-muted">
+              {assignments?.length ?? 0} {assignments?.length === 1 ? 'person' : 'people'}
+              {filter.trim() ? ` · ${visible.length} shown` : ''}
+            </p>
+          </div>
+          <div className="sm:w-64">
+            <TextInput
+              aria-label="Filter people"
+              placeholder="Filter by name or email"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+            />
+          </div>
+        </div>
+
         {assignments?.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No admins or invitations yet.</p>
+          <p className="px-5 py-6 text-sm text-muted">No admins or invitations yet.</p>
+        ) : visible.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-muted">No one matches that filter.</p>
         ) : (
-          <ul className="mt-2 divide-y divide-line">
-            {assignments?.map((assignment) => (
-              <li
-                key={assignment.assignmentId}
-                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-navy">
-                    {assignment.name ?? assignment.email}
-                  </p>
-                  <p className="truncate text-xs text-muted">
-                    {assignment.email} · {assignment.source === 'ADMIN' ? 'admin account' : 'invitation'}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted">
-                    {assignment.lastLoginAt
-                      ? `Last sign-in ${formatDateTime(assignment.lastLoginAt)}`
-                      : assignment.expiresAt
-                        ? `Expires ${formatDateTime(assignment.expiresAt)}`
-                        : 'Never signed in'}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone={STATUS_TONE[assignment.status] ?? 'neutral'}>
-                    {assignment.status.toLowerCase()}
-                  </Badge>
-                  <SelectField
-                    aria-label={`Role for ${assignment.email}`}
-                    value={assignment.role}
-                    onChange={(event) =>
-                      void changeRole(assignment.assignmentId, event.target.value as AdminRole)
-                    }
-                    options={ADMIN_ROLE_VALUES.map((role) => ({
-                      value: role,
-                      label: ADMIN_ROLE_LABELS[role],
-                    }))}
-                    disabled={busy}
-                    className="w-40"
-                  />
-                  {assignment.status === 'DISABLED' && assignment.source === 'ADMIN' ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() => void restore(assignment.assignmentId)}
+          <>
+            {/* Desktop / tablet table */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="bg-alabaster text-[11px] uppercase tracking-wider text-muted">
+                  <tr>
+                    <th scope="col" className="px-5 py-3 font-semibold">
+                      Person
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Role
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 font-semibold">
+                      Activity
+                    </th>
+                    <th scope="col" className="px-5 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {visible.map((assignment) => (
+                    <tr
+                      key={assignment.assignmentId}
+                      className="transition-colors hover:bg-alabaster/70"
                     >
-                      Restore
-                    </Button>
-                  ) : assignment.status === 'PENDING' || assignment.status === 'ACTIVE' ? (
-                    <Button size="sm" variant="danger" disabled={busy} onClick={() => void revoke(assignment)}>
-                      Revoke
-                    </Button>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <PersonAvatar
+                            label={assignment.name ?? assignment.email}
+                            pending={assignment.source === 'INVITATION'}
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-navy">
+                              {assignment.name ?? assignment.email}
+                            </p>
+                            <p className="truncate text-xs text-muted">
+                              {assignment.name ? `${assignment.email} · ` : ''}
+                              {assignment.source === 'ADMIN' ? 'Admin account' : 'Invitation'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5">{roleSelect(assignment, 'w-40')}</td>
+                      <td className="px-4 py-3.5">
+                        <Badge tone={STATUS_TONE[assignment.status] ?? 'neutral'}>
+                          {assignment.status.toLowerCase()}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3.5 text-xs text-muted">
+                        {activityLine(assignment)}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">{rowActions(assignment)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <ul className="divide-y divide-line md:hidden">
+              {visible.map((assignment) => (
+                <li key={assignment.assignmentId} className="space-y-3 p-4">
+                  <div className="flex items-start gap-3">
+                    <PersonAvatar
+                      label={assignment.name ?? assignment.email}
+                      pending={assignment.source === 'INVITATION'}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="truncate font-medium text-navy">
+                          {assignment.name ?? assignment.email}
+                        </p>
+                        <Badge tone={STATUS_TONE[assignment.status] ?? 'neutral'}>
+                          {assignment.status.toLowerCase()}
+                        </Badge>
+                      </div>
+                      <p className="truncate text-xs text-muted">
+                        {assignment.name ? `${assignment.email} · ` : ''}
+                        {assignment.source === 'ADMIN' ? 'Admin account' : 'Invitation'}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted">{activityLine(assignment)}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    {roleSelect(assignment, 'w-44')}
+                    {rowActions(assignment)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
-      </Card>
+      </div>
+
+      {/* Role permissions (loads from /admin/role-permissions) */}
+      <RolePermissions />
     </div>
   );
 }

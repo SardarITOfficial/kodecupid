@@ -268,3 +268,10 @@ export interface AdminAuditLogRow {
   targetId: string | null;
   createdAt: string;
 }
+export interface RolePermissionsView {
+  role: AdminRole;
+  permissions: Permission[];
+  /** True for Super Admin: always full access, cannot be edited. */
+  locked: boolean;
+  updatedAt: string | null;
+}
