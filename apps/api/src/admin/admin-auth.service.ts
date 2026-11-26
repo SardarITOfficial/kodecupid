@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
-  permissionsFor,
   type AdminSession,
   type AdminSummary,
   type AdminLoginInput,
@@ -17,6 +16,7 @@ import { TokensService } from '../auth/tokens.service';
 import type { RequestMeta } from '../auth/auth.service';
 import { AuditService } from './audit.service';
 import { hashPassword, verifyPassword } from './passwords';
+import { RolePermissionsService } from './role-permissions.service';
 
 export interface AdminAuthResult {
   accessToken: string;
@@ -46,6 +46,7 @@ export class AdminAuthService {
     private readonly tokens: TokensService,
     private readonly limiter: RateLimiterService,
     private readonly audit: AuditService,
+    private readonly rolePermissions: RolePermissionsService,
   ) {}
 
   async login(input: AdminLoginInput, meta: RequestMeta): Promise<AdminAuthResult> {
@@ -106,7 +107,7 @@ export class AdminAuthService {
     return {
       accessToken,
       refreshToken: this.tokens.encodeRefresh(session.id, secret),
-      session: this.toSession(admin),
+      session: await this.toSession(admin),
     };
   }
 
@@ -153,7 +154,7 @@ export class AdminAuthService {
     return {
       accessToken,
       refreshToken: this.tokens.encodeRefresh(replacement.id, secret),
-      session: this.toSession(admin!),
+      session: await this.toSession(admin!),
     };
   }
 
@@ -234,10 +235,11 @@ export class AdminAuthService {
     return { token, hash: this.hashInviteToken(token) };
   }
 
-  toSession(admin: AdminUser): AdminSession {
+  /** Session payload for the browser, carrying the role's saved permissions. */
+  async toSession(admin: AdminUser): Promise<AdminSession> {
     return {
       admin: toAdminSummary(admin),
-      permissions: [...permissionsFor(admin.role as AdminRole)],
+      permissions: await this.rolePermissions.permissionsFor(admin.role as AdminRole),
     };
   }
 }

@@ -82,10 +82,10 @@ export class AdminAuthController {
 
   @Get('me')
   @UseGuards(AdminAuthGuard)
-  me(@CurrentAdmin() admin: AdminAudienceUser): AdminSession {
+  async me(@CurrentAdmin() admin: AdminAudienceUser) {
     return {
       admin: toAdminSummary(admin.admin),
-      permissions: [...this.auth.toSession(admin.admin).permissions],
+      permissions: [...(await this.auth.toSession(admin.admin)).permissions],
     };
   }
 }

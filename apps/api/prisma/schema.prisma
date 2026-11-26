@@ -504,3 +504,11 @@ model AdminAuditLog {
   @@index([createdAt])
   @@map("admin_audit_logs")
 }
+model RolePermissionSet {
+  role        AdminRole @id
+  permissions String[]  @default([])
+  updatedById String?
+  updatedAt   DateTime  @updatedAt
+
+  @@map("role_permission_sets")
+}
