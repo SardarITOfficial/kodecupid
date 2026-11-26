@@ -13,8 +13,6 @@ build/
 apps/api/src/generated/
 
 # env
-.env
-.env.local
 .env.*.local
 !.env.example
 
@@ -35,7 +33,6 @@ npm-debug.log*
 pnpm-debug.log*
 
 # editors / OS
-.vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
@@ -44,3 +41,4 @@ Thumbs.db
 # misc
 .turbo/
 .cache/
+config.bat

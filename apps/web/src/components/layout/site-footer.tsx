@@ -56,7 +56,7 @@ export function SiteFooter() {
       {/* Same deep maroon as the Intro section */}
       <div aria-hidden className="absolute inset-0 -z-10 bg-linear-to-b from-black/45 to-black/65" />
 
-      <div className="mx-auto max-w-350 px-4 pt-16 sm:px-6 lg:px-8">
+      <div className="mx-auto container px-4 pt-16 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-[1.25fr_repeat(5,1fr)] lg:gap-8">
           {/* Brand + blurb + language */}
           <div>

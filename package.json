@@ -8,8 +8,8 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build": "pnpm --filter @kodecupid/shared build && pnpm --filter api build && pnpm --filter web build",
-    "dev": "pnpm --filter @kodecupid/shared build && pnpm -r --parallel --filter api --filter web dev",
+    "build": "node init && pnpm --filter @kodecupid/shared build && pnpm --filter api build && pnpm --filter web build",
+    "dev": "node init && pnpm --filter @kodecupid/shared build && pnpm -r --parallel --filter api --filter web dev",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
